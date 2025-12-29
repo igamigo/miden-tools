@@ -3,13 +3,15 @@ use std::path::PathBuf;
 use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand, ValueEnum};
 use miden_client::address::Address;
+use miden_client::note::NoteTag;
 
-use crate::{
-    account, inspect, net, parse, rpc_tools, store_account, store_inspect, store_note, tx_inspect,
-    word,
-};
 #[cfg(feature = "tui")]
-use crate::store_tui;
+use crate::store::tui as store_tui;
+use crate::{
+    commands::{account, inspect, rpc, tx, word},
+    store,
+    util::{net, parse},
+};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -48,19 +50,10 @@ pub enum Command {
         #[command(subcommand)]
         command: StoreCommand,
     },
-    /// Build a word from one 0x-hex word or four felts (decimal or 0x-hex)
-    Word {
-        /// Provide one 0x-prefixed 32-byte word or four felts (decimal or 0x-hex)
-        #[arg(num_args = 1..=4, value_name = "value")]
-        values: Vec<String>,
-    },
-    /// Resolve an account ID from a bech32 address or 0x-hex account id
-    AccountId {
-        /// Account address (bech32) or account ID (0x-hex)
-        account: String,
-        /// Network to use when encoding an address from an account ID
-        #[arg(long, value_enum)]
-        network: Option<Network>,
+    /// Parsing helpers for common formats
+    Parse {
+        #[command(subcommand)]
+        command: ParseCommand,
     },
 }
 
@@ -148,6 +141,29 @@ pub enum StoreCommand {
 }
 
 #[derive(Debug, Subcommand)]
+pub enum ParseCommand {
+    /// Build a word from one 0x-hex word or four felts (decimal or 0x-hex)
+    Word {
+        /// Provide one 0x-prefixed 32-byte word or four felts (decimal or 0x-hex)
+        #[arg(num_args = 1..=4, value_name = "value")]
+        values: Vec<String>,
+    },
+    /// Resolve an account ID from a bech32 address or 0x-hex account id
+    AccountId {
+        /// Account address (bech32) or account ID (0x-hex)
+        account: String,
+        /// Network to use when encoding an address from an account ID
+        #[arg(long, value_enum)]
+        network: Option<Network>,
+    },
+    /// Parse a note tag (decimal or 0x-hex)
+    NoteTag {
+        /// Note tag value (decimal or 0x-hex)
+        tag: String,
+    },
+}
+
+#[derive(Debug, Subcommand)]
 pub enum StoreTxCommand {
     /// Inspect a transaction from a local store by its id
     Inspect {
@@ -195,7 +211,7 @@ impl Cli {
             Command::Rpc { command } => match command {
                 RpcCommand::Status { network, endpoint } => {
                     let endpoint = net::resolve_endpoint(network, endpoint)?;
-                    rpc_tools::rpc_status(endpoint)
+                    rpc::rpc_status(endpoint)
                 }
                 RpcCommand::Note {
                     note_id,
@@ -225,7 +241,7 @@ impl Cli {
                 }
             },
             Command::Store { command } => match command {
-                StoreCommand::Inspect { store } => store_inspect::inspect_store(store),
+                StoreCommand::Inspect { store } => store::inspect::inspect_store(store),
                 StoreCommand::Account {
                     store,
                     account,
@@ -235,23 +251,25 @@ impl Cli {
                     let query = match (account, commitment, nonce) {
                         (Some(account), None, None) => {
                             let (account_id, _) = parse::account_id(&account)?;
-                            store_account::StoreAccountQuery::AccountId(account_id)
+                            store::account::StoreAccountQuery::AccountId(account_id)
                         }
                         (None, Some(commitment), None) => {
-                            store_account::StoreAccountQuery::Commitment(commitment)
+                            store::account::StoreAccountQuery::Commitment(commitment)
                         }
-                        (None, None, Some(nonce)) => store_account::StoreAccountQuery::Nonce(nonce),
+                        (None, None, Some(nonce)) => {
+                            store::account::StoreAccountQuery::Nonce(nonce)
+                        }
                         _ => {
                             return Err(anyhow!(
                                 "provide exactly one of --account, --commitment, or --nonce"
                             ));
                         }
                     };
-                    store_account::inspect_store_account(store, query)
+                    store::account::inspect_store_account(store, query)
                 }
                 StoreCommand::Note { store, note_id } => {
                     let note_id = parse::note_id(&note_id)?;
-                    store_note::inspect_store_note(store, note_id)
+                    store::note::inspect_store_note(store, note_id)
                 }
                 StoreCommand::Tx { command } => match command {
                     StoreTxCommand::Inspect {
@@ -260,59 +278,73 @@ impl Cli {
                         verbose,
                     } => {
                         let tx_id = parse::transaction_id(&tx_id)?;
-                        tx_inspect::inspect_transaction(store, tx_id, verbose)
+                        tx::inspect_transaction(store, tx_id, verbose)
                     }
-                    StoreTxCommand::List { store } => tx_inspect::list_transactions(store),
+                    StoreTxCommand::List { store } => tx::list_transactions(store),
                 },
                 #[cfg(feature = "tui")]
                 StoreCommand::Tui { store } => store_tui::run_store_tui(store),
             },
-            Command::Word { values } => {
-                let word = parse::word(&values)?;
-                word::build_word(word)
-            }
-            Command::AccountId { account, network } => {
-                let decoded_address = Address::decode(&account).ok();
-                let (account_id, network_hint) = parse::account_id(&account)?;
-                let selected_network_id = network.clone().and_then(net::network_id_for_cli_network);
+            Command::Parse { command } => match command {
+                ParseCommand::Word { values } => {
+                    let word = parse::word(&values)?;
+                    word::build_word(word)
+                }
+                ParseCommand::AccountId { account, network } => {
+                    let decoded_address = Address::decode(&account).ok();
+                    let (account_id, network_hint) = parse::account_id(&account)?;
+                    let selected_network_id =
+                        network.clone().and_then(net::network_id_for_cli_network);
 
-                println!("Account ID: {}", account_id);
-                println!("- account id (hex): {}", account_id.to_hex());
-                println!("- account type: {:?}", account_id.account_type());
-                println!("- storage mode: {}", account_id.storage_mode());
-                println!(
-                    "- public state: {}",
-                    if account_id.has_public_state() {
-                        "yes"
-                    } else {
-                        "no"
-                    }
-                );
-                println!("- account ID version: {:?}", account_id.version());
-
-                if let Some((address_network, address)) = decoded_address {
-                    if let Some(expected) = selected_network_id.clone() {
-                        if expected != address_network {
-                            println!(
-                                "- warning: address network {address_network} does not match selected {expected}"
-                            );
-                        }
-                    }
-                    println!("- address: {}", address.encode(address_network));
-                } else if let Some(network_id) = selected_network_id {
-                    let address = Address::new(account_id);
+                    println!("Account ID: {}", account_id);
+                    println!("- account id (hex): {}", account_id.to_hex());
+                    println!("- account type: {:?}", account_id.account_type());
+                    println!("- storage mode: {}", account_id.storage_mode());
                     println!(
-                        "- address ({network_id}): {}",
-                        address.encode(network_id.clone())
+                        "- public state: {}",
+                        if account_id.has_public_state() {
+                            "yes"
+                        } else {
+                            "no"
+                        }
                     );
-                }
+                    println!("- account ID version: {:?}", account_id.version());
 
-                if let Some(network_id) = network_hint {
-                    println!("- address network: {}", network_id);
-                }
+                    if let Some((address_network, address)) = decoded_address {
+                        if let Some(expected) = selected_network_id.clone() {
+                            if expected != address_network {
+                                println!(
+                                    "- warning: address network {address_network} does not match selected {expected}"
+                                );
+                            }
+                        }
+                        println!("- address: {}", address.encode(address_network));
+                    } else if let Some(network_id) = selected_network_id {
+                        let address = Address::new(account_id);
+                        println!(
+                            "- address ({network_id}): {}",
+                            address.encode(network_id.clone())
+                        );
+                    }
 
-                Ok(())
-            }
+                    if let Some(network_id) = network_hint {
+                        println!("- address network: {}", network_id);
+                    }
+
+                    Ok(())
+                }
+                ParseCommand::NoteTag { tag } => {
+                    let value = parse::u64(&tag)?;
+                    let raw: u32 = value
+                        .try_into()
+                        .map_err(|_| anyhow!("note tag must fit in u32"))?;
+                    let tag = NoteTag::from(raw);
+                    println!("Note tag: {}", tag);
+                    println!("- raw (hex): 0x{raw:08x}");
+                    println!("- decoded: {}", crate::render::note::format_note_tag(tag));
+                    Ok(())
+                }
+            },
         }
     }
 }

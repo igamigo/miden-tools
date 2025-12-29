@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
 use miden_client::{address::NetworkId, rpc::Endpoint};
 
-use crate::{cli::Network, parse};
+use crate::{cli::Network, util::parse};
 
 pub(crate) const DEFAULT_TIMEOUT_MS: u64 = 10_000;
 

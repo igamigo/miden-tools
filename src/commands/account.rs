@@ -6,8 +6,8 @@ use miden_client::{
 };
 use tokio::runtime::Runtime;
 
-use crate::net::DEFAULT_TIMEOUT_MS;
 use crate::render::account::{render_account_header, render_public_account};
+use crate::util::net::DEFAULT_TIMEOUT_MS;
 
 /// Fetch and display account details for an on-chain account id or bech32 address.
 pub(crate) fn inspect_account(

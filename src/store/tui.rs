@@ -158,30 +158,32 @@ impl StoreTui {
         self.accounts = accounts;
         self.account_headers = headers;
 
-        self.input_notes = self.handle.block_on(self.store.get_input_notes(NoteFilter::All))?;
+        self.input_notes = self
+            .handle
+            .block_on(self.store.get_input_notes(NoteFilter::All))?;
         self.output_notes_total = query_u64(&self.conn, "SELECT COUNT(*) FROM output_notes")?;
         self.output_notes.clear();
         self.output_notes_loaded = false;
         self.transactions = self
             .handle
             .block_on(self.store.get_transactions(TransactionFilter::All))?;
-        self.block_headers = self.handle.block_on(self.store.get_tracked_block_headers())?;
+        self.block_headers = self
+            .handle
+            .block_on(self.store.get_tracked_block_headers())?;
         self.block_headers.sort_by_key(|header| header.block_num());
 
-        self.mmr_nodes = self
-            .handle
-            .block_on(self.store.get_partial_blockchain_nodes(PartialBlockchainFilter::All))?;
-        self.mmr_peaks = self
-            .block_headers
-            .last()
-            .and_then(|header| {
-                self.handle
-                    .block_on(
-                        self.store
-                            .get_partial_blockchain_peaks_by_block_num(header.block_num()),
-                    )
-                    .ok()
-            });
+        self.mmr_nodes = self.handle.block_on(
+            self.store
+                .get_partial_blockchain_nodes(PartialBlockchainFilter::All),
+        )?;
+        self.mmr_peaks = self.block_headers.last().and_then(|header| {
+            self.handle
+                .block_on(
+                    self.store
+                        .get_partial_blockchain_peaks_by_block_num(header.block_num()),
+                )
+                .ok()
+        });
 
         self.input_notes_per_block = count_notes_per_block(&self.input_notes);
         self.output_notes_per_block.clear();
@@ -396,7 +398,7 @@ impl StoreTui {
             .constraints([
                 Constraint::Length(3),
                 Constraint::Min(5),
-            Constraint::Length(3),
+                Constraint::Length(3),
             ])
             .split(frame.size());
 
@@ -529,14 +531,13 @@ impl StoreTui {
     fn account_detail(&self, idx: usize) -> Vec<Line<'static>> {
         let id = self.accounts[idx];
         let mut lines = vec![Line::from(format!("account id: {id}"))];
-        if let Some(header) = self
-            .account_headers
-            .get(idx)
-            .and_then(|h| h.clone())
-        {
+        if let Some(header) = self.account_headers.get(idx).and_then(|h| h.clone()) {
             lines.push(Line::from(format!("nonce: {}", header.nonce())));
             lines.push(Line::from(format!("vault: {}", header.vault_root())));
-            lines.push(Line::from(format!("storage: {}", header.storage_commitment())));
+            lines.push(Line::from(format!(
+                "storage: {}",
+                header.storage_commitment()
+            )));
             lines.push(Line::from(format!("code: {}", header.code_commitment())));
         } else {
             lines.push(Line::from("header: n/a"));
@@ -583,14 +584,20 @@ impl StoreTui {
         if let Some(metadata) = note.metadata() {
             lines.push(Line::from(format!("sender: {}", metadata.sender())));
             lines.push(Line::from(format!("type: {:?}", metadata.note_type())));
-            lines.push(Line::from(format!("tag: {}", format_note_tag(metadata.tag()))));
+            lines.push(Line::from(format!(
+                "tag: {}",
+                format_note_tag(metadata.tag())
+            )));
         }
 
         lines.push(Line::from(format!(
             "assets: {}",
             details.assets().num_assets()
         )));
-        lines.push(Line::from(format!("inputs: {}", details.inputs().values().len())));
+        lines.push(Line::from(format!(
+            "inputs: {}",
+            details.inputs().values().len()
+        )));
         lines
     }
 
@@ -599,7 +606,10 @@ impl StoreTui {
         let mut lines = vec![
             Line::from(format!("id: {}", note.id())),
             Line::from(format!("state: {:?}", note.state())),
-            Line::from(format!("expected height: {}", note.expected_height().as_u32())),
+            Line::from(format!(
+                "expected height: {}",
+                note.expected_height().as_u32()
+            )),
             Line::from(format!("sender: {}", note.metadata().sender())),
             Line::from(format!("type: {:?}", note.metadata().note_type())),
             Line::from(format!("tag: {}", format_note_tag(note.metadata().tag()))),
@@ -639,7 +649,11 @@ impl StoreTui {
             Line::from(format!("timestamp: {}", header.timestamp())),
         ];
 
-        let input_count = self.input_notes_per_block.get(&block_num).copied().unwrap_or(0);
+        let input_count = self
+            .input_notes_per_block
+            .get(&block_num)
+            .copied()
+            .unwrap_or(0);
         let output_count = self.output_notes_per_block.get(&block_num).copied();
         lines.push(Line::from(format!(
             "notes in block: input {} | output {}",
@@ -720,7 +734,10 @@ impl StoreTui {
         Ok(())
     }
 
-    fn account_history(&self, account_id: miden_client::account::AccountId) -> Result<AccountHistory> {
+    fn account_history(
+        &self,
+        account_id: miden_client::account::AccountId,
+    ) -> Result<AccountHistory> {
         let id_value: u128 = account_id.into();
         let id_value: i64 = id_value
             .try_into()

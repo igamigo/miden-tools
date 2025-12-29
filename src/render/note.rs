@@ -196,7 +196,9 @@ fn format_felt(value: Felt) -> String {
 fn format_asset_from_word(word: Word) -> String {
     match Asset::try_from(word) {
         Ok(asset) => match asset {
-            Asset::Fungible(f) => format!("fungible amount={} faucet={}", f.amount(), f.faucet_id()),
+            Asset::Fungible(f) => {
+                format!("fungible amount={} faucet={}", f.amount(), f.faucet_id())
+            }
             Asset::NonFungible(nf) => format!(
                 "non-fungible faucet-prefix={} value={:?}",
                 nf.faucet_id_prefix(),

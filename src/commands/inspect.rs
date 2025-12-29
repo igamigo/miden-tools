@@ -12,10 +12,10 @@ use miden_client::{
 use miden_crypto::merkle::SparseMerklePath;
 use tokio::runtime::Runtime;
 
-use crate::net::DEFAULT_TIMEOUT_MS;
 use crate::render::note::{
     format_note_tag, render_assets, render_well_known_inputs, well_known_label_from_root,
 };
+use crate::util::net::DEFAULT_TIMEOUT_MS;
 
 pub(crate) fn inspect_note(note_id: NoteId, endpoint: Endpoint) -> Result<()> {
     let rt = Runtime::new()?;

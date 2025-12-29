@@ -4,7 +4,7 @@ use anyhow::Result;
 use miden_client::rpc::{Endpoint, GrpcClient, NodeRpcClient};
 use tokio::runtime::Runtime;
 
-use crate::net::DEFAULT_TIMEOUT_MS;
+use crate::util::net::DEFAULT_TIMEOUT_MS;
 
 pub(crate) fn rpc_status(endpoint: Endpoint) -> Result<()> {
     let rt = Runtime::new()?;
