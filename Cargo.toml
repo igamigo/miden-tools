@@ -1,0 +1,17 @@
+[package]
+name = "miden-distaff"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "distaff"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+clap_complete = "4.5"
+miden-client = { version = "0.12.5", features = ["tonic"] }
+miden-client-sqlite-store = { version = "0.12.5"}
+tokio = { version = "1.48", features = ["rt-multi-thread"] }
+rusqlite = { version = "0.36", features = ["bundled"] }
