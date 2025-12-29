@@ -1,13 +1,13 @@
 use anyhow::Result;
 use miden_client::{
-    account::{Account, AccountHeader, AccountId},
+    account::AccountId,
     address::NetworkId,
-    asset::Asset,
     rpc::{Endpoint, GrpcClient, NodeRpcClient},
 };
 use tokio::runtime::Runtime;
 
 use crate::net::DEFAULT_TIMEOUT_MS;
+use crate::render::account::{render_account_header, render_public_account};
 
 /// Fetch and display account details for an on-chain account id or bech32 address.
 pub(crate) fn inspect_account(
@@ -64,52 +64,4 @@ pub(crate) fn inspect_account(
         }
         Ok(())
     })
-}
-
-fn render_public_account(account: &Account) {
-    let header = AccountHeader::from(account);
-    println!("- account type: {:?}", account.account_type());
-    println!("- nonce: {}", header.nonce());
-    println!("- vault commitment: {}", header.vault_root());
-    println!("- storage commitment: {}", header.storage_commitment());
-    println!("- code commitment: {}", header.code_commitment());
-    println!("- header commitment: {}", header.commitment());
-    println!("- storage slots: {}", account.storage().slots().len());
-    render_vault(account.vault());
-}
-
-fn render_account_header(account: &Account) {
-    let header = AccountHeader::from(account);
-    println!("- account type: {:?}", account.account_type());
-    println!("- nonce: {}", header.nonce());
-    println!("- vault commitment: {}", header.vault_root());
-    println!("- storage commitment: {}", header.storage_commitment());
-    println!("- code commitment: {}", header.code_commitment());
-    println!("- header commitment: {}", header.commitment());
-}
-
-fn render_vault(vault: &miden_client::asset::AssetVault) {
-    if vault.is_empty() {
-        println!("- assets: 0");
-        return;
-    }
-
-    println!("- assets: {}", vault.num_assets());
-    println!("- asset details:");
-    for (idx, asset) in vault.assets().enumerate() {
-        println!("  [{idx}] {}", format_asset(&asset));
-    }
-}
-
-fn format_asset(asset: &Asset) -> String {
-    match asset {
-        Asset::Fungible(f) => format!("fungible amount={} faucet={}", f.amount(), f.faucet_id()),
-        Asset::NonFungible(nf) => {
-            format!(
-                "non-fungible faucet-prefix={} value={:?}",
-                nf.faucet_id_prefix(),
-                nf
-            )
-        }
-    }
 }

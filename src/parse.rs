@@ -24,9 +24,7 @@ pub(crate) fn account_id(raw: &str) -> Result<(AccountId, Option<NetworkId>)> {
         }
     }
 
-    Err(anyhow!(
-        "invalid account id, use 0x-hex or bech32 address"
-    ))
+    Err(anyhow!("invalid account id, use 0x-hex or bech32 address"))
 }
 
 /// Parse a CLI word input: either a single 0x-hex word or four felts (decimal or 0x-hex).

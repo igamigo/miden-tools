@@ -2,17 +2,20 @@ use std::{collections::BTreeSet, fs, path::PathBuf};
 
 use anyhow::{Context, Result, anyhow};
 use miden_client::{
-    BlockNumber, Felt, Word,
-    account::{AccountFile, AccountId},
-    asset::Asset,
-    note::{NoteAssets, NoteId, NoteInclusionProof, NoteTag, NoteType, Nullifier, WellKnownNote},
+    BlockNumber, Word,
+    account::AccountFile,
+    note::{NoteHeader, NoteId, NoteInclusionProof, Nullifier},
     notes::NoteFile,
     rpc::{Endpoint, GrpcClient, NodeRpcClient},
     utils::Deserializable,
 };
+use miden_crypto::merkle::SparseMerklePath;
 use tokio::runtime::Runtime;
 
 use crate::net::DEFAULT_TIMEOUT_MS;
+use crate::render::note::{
+    format_note_tag, render_assets, render_well_known_inputs, well_known_label_from_root,
+};
 
 pub(crate) fn inspect_note(note_id: NoteId, endpoint: Endpoint) -> Result<()> {
     let rt = Runtime::new()?;
@@ -82,16 +85,9 @@ fn render_note_file(note_file: &NoteFile) {
             let note_id = details.id();
             let inputs = details.inputs().values();
 
-            let is_p2id = script_root == WellKnownNote::P2ID.script_root();
-            let script_label = if is_p2id {
-                format!("{script_root} (P2ID)")
-            } else {
-                script_root.to_string()
-            };
-            let p2id_target = if is_p2id {
-                extract_account_id_from_inputs(inputs)
-            } else {
-                None
+            let script_label = match well_known_label_from_root(&script_root) {
+                Some(label) => format!("{script_root} ({label})"),
+                None => script_root.to_string(),
             };
 
             println!("- variant: NoteDetails");
@@ -103,24 +99,15 @@ fn render_note_file(note_file: &NoteFile) {
                 "- tag: {}",
                 tag.map(format_note_tag).unwrap_or_else(|| "n/a".into())
             );
-            if let Some(target) = p2id_target {
-                println!("- target account (P2ID): {target}");
-            }
+            render_well_known_inputs(&script_root, inputs, "- ", "  ");
         }
         NoteFile::NoteWithProof(note, proof) => {
             let metadata = note.metadata();
             let location = proof.location();
             let script_root = note.script().root();
-            let is_p2id = script_root == WellKnownNote::P2ID.script_root();
-            let script_label = if is_p2id {
-                format!("{script_root} (P2ID)")
-            } else {
-                script_root.to_string()
-            };
-            let p2id_target = if is_p2id {
-                extract_account_id_from_inputs(note.inputs().values())
-            } else {
-                None
+            let script_label = match well_known_label_from_root(&script_root) {
+                Some(label) => format!("{script_root} ({label})"),
+                None => script_root.to_string(),
             };
 
             println!("- variant: NoteWithProof");
@@ -132,9 +119,7 @@ fn render_note_file(note_file: &NoteFile) {
             println!("- script root: {script_label}");
             println!("- created in block: {}", location.block_num().as_u32());
             println!("- node index in block: {}", location.node_index_in_block());
-            if let Some(target) = p2id_target {
-                println!("- target account (P2ID): {target}");
-            }
+            render_well_known_inputs(&script_root, note.inputs().values(), "- ", "  ");
         }
     }
 }
@@ -155,52 +140,6 @@ fn render_account_file(account_file: &AccountFile) {
     );
 }
 
-fn extract_account_id_from_inputs(inputs: &[Felt]) -> Option<AccountId> {
-    let account_inputs: [Felt; 2] = inputs.get(0..2)?.try_into().ok()?;
-    AccountId::try_from([account_inputs[1], account_inputs[0]]).ok()
-}
-
-fn format_note_tag(tag: NoteTag) -> String {
-    let raw: u32 = tag.into();
-    let execution = tag.execution_mode();
-    let target = if tag.is_single_target() {
-        "single-target"
-    } else {
-        "use-case"
-    };
-    let note_types = if tag.validate(NoteType::Private).is_ok() {
-        "any note type"
-    } else {
-        "public only"
-    };
-
-    format!("0x{raw:08x} (mode: {execution:?}, target: {target}, {note_types})")
-}
-
-fn render_assets(assets: &NoteAssets) {
-    if assets.is_empty() {
-        println!("- assets: 0");
-        return;
-    }
-
-    println!("- assets: {}", assets.num_assets());
-    println!("- asset details:");
-    for (idx, asset) in assets.iter().enumerate() {
-        println!("  [{idx}] {}", format_asset(asset));
-    }
-}
-
-fn format_asset(asset: &Asset) -> String {
-    match asset {
-        Asset::Fungible(f) => format!("fungible amount={} faucet={}", f.amount(), f.faucet_id()),
-        Asset::NonFungible(nf) => format!(
-            "non-fungible faucet-prefix={} value={:?}",
-            nf.faucet_id_prefix(),
-            nf
-        ),
-    }
-}
-
 fn run_note_validation(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
     let rt = Runtime::new()?;
     rt.block_on(validate_note(note_file, endpoint))
@@ -211,11 +150,13 @@ async fn validate_note(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
 
     let rpc = GrpcClient::new(&endpoint, DEFAULT_TIMEOUT_MS);
 
+    println!();
     println!("Validation (network: {}):", endpoint);
 
     match note_file {
         NoteFile::NoteWithProof(note, proof) => {
-            verify_inclusion_with_header(&rpc, note.id(), proof, "local").await?;
+            println!("- validation path: local inclusion proof (block header check)");
+            verify_inclusion_with_header(&rpc, note.commitment(), proof, "local").await?;
         }
         NoteFile::NoteDetails {
             details,
@@ -223,6 +164,7 @@ async fn validate_note(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
             tag,
         } => {
             if let Some(tag) = tag {
+                println!("- validation path: sync_notes by tag");
                 let mut tags = BTreeSet::new();
                 tags.insert(*tag);
                 let note_id = details.id();
@@ -233,8 +175,12 @@ async fn validate_note(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
                             if let Some(committed) =
                                 info.notes.iter().find(|note| note.note_id() == &note_id)
                             {
+                                let header = NoteHeader::new(
+                                    committed.note_id().clone(),
+                                    committed.metadata(),
+                                );
                                 verify_inclusion_with_root(
-                                    note_id,
+                                    header.commitment(),
                                     committed.note_index(),
                                     committed.inclusion_path(),
                                     info.block_header.note_root(),
@@ -261,19 +207,23 @@ async fn validate_note(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
                     }
                 }
             } else {
+                println!("- validation path: no note tag available to sync");
                 println!("- no note tag available to sync notes");
             }
         }
         NoteFile::NoteId(note_id) => {
+            println!("- validation path: get_notes_by_id");
             match rpc.get_notes_by_id(&[*note_id]).await {
                 Ok(notes) => {
                     if notes.is_empty() {
                         println!("- note {note_id} not found on node");
                     } else {
                         for fetched in notes {
+                            let header =
+                                NoteHeader::new(fetched.id().clone(), fetched.metadata().clone());
                             verify_inclusion_with_header(
                                 &rpc,
-                                fetched.id(),
+                                header.commitment(),
                                 fetched.inclusion_proof(),
                                 "node",
                             )
@@ -322,22 +272,19 @@ fn note_nullifier(note_file: &NoteFile) -> Option<Nullifier> {
     }
 }
 
-
 async fn verify_inclusion_with_header(
     rpc: &GrpcClient,
-    note_id: NoteId,
+    note_commitment: Word,
     proof: &NoteInclusionProof,
     label: &str,
 ) -> Result<()> {
     let location = proof.location();
     let block_num = location.block_num();
-    let note_index = location.node_index_in_block() as u64;
-    let note_value: Word = note_id.into();
 
     match rpc.get_block_header_by_number(Some(block_num), false).await {
         Ok((header, _)) => {
             verify_inclusion_with_root(
-                note_id,
+                note_commitment,
                 proof.location().node_index_in_block(),
                 proof.note_path(),
                 header.note_root(),
@@ -354,21 +301,17 @@ async fn verify_inclusion_with_header(
 }
 
 fn verify_inclusion_with_root(
-    note_id: NoteId,
+    note_commitment: Word,
     note_index: u16,
-    path: &miden_client::crypto::merkle::SparseMerklePath,
+    path: &SparseMerklePath,
     root: Word,
     label: &str,
 ) -> Result<()> {
-    let note_value: Word = note_id.into();
+    let note_value: Word = note_commitment.into();
     let result = path.verify(note_index as u64, note_value, &root);
     match result {
-        Ok(()) => println!(
-            "- {label} inclusion proof: ok (index {note_index})"
-        ),
-        Err(err) => println!(
-            "- {label} inclusion proof: failed (index {note_index}): {err}"
-        ),
+        Ok(()) => println!("- {label} inclusion proof: ok (index {note_index})"),
+        Err(err) => println!("- {label} inclusion proof: failed (index {note_index}): {err}"),
     }
     Ok(())
 }
@@ -387,7 +330,13 @@ fn render_fetched_note(fetched: &miden_client::rpc::domain::note::FetchedNote) {
     match fetched {
         miden_client::rpc::domain::note::FetchedNote::Public(note, _) => {
             render_assets(note.assets());
-            println!("- script root: {}", note.script().root());
+            let script_root = note.script().root();
+            let script_label = match well_known_label_from_root(&script_root) {
+                Some(label) => format!("{script_root} ({label})"),
+                None => script_root.to_string(),
+            };
+            println!("- script root: {script_label}");
+            render_well_known_inputs(&script_root, note.inputs().values(), "- ", "  ");
         }
         miden_client::rpc::domain::note::FetchedNote::Private(..) => {
             println!("- visibility: private (details not available)");

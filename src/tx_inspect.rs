@@ -1,8 +1,10 @@
 use anyhow::{Context, Result};
 use miden_client::store::{Store, TransactionFilter};
-use miden_client::transaction::TransactionRecord;
+use miden_client::transaction::{OutputNote, TransactionRecord};
 use miden_client_sqlite_store::SqliteStore;
 use tokio::runtime::Runtime;
+
+use crate::render::note::{render_well_known_inputs, well_known_label_from_root};
 
 pub(crate) fn inspect_transaction(
     store_path: std::path::PathBuf,
@@ -24,7 +26,12 @@ pub(crate) fn inspect_transaction(
             return Ok(());
         }
 
+        let mut first = true;
         for tx in transactions {
+            if !first {
+                println!();
+            }
+            first = false;
             render_transaction(&tx, verbose);
         }
 
@@ -60,9 +67,18 @@ fn render_transaction(tx: &TransactionRecord, verbose: bool) {
     println!("- status: {}", tx.status);
     println!("- account id: {}", details.account_id);
     println!("- block num: {}", details.block_num.as_u32());
-    println!("- submission height: {}", details.submission_height.as_u32());
-    println!("- expiration block: {}", details.expiration_block_num.as_u32());
-    println!("- input nullifiers: {}", details.input_note_nullifiers.len());
+    println!(
+        "- submission height: {}",
+        details.submission_height.as_u32()
+    );
+    println!(
+        "- expiration block: {}",
+        details.expiration_block_num.as_u32()
+    );
+    println!(
+        "- input nullifiers: {}",
+        details.input_note_nullifiers.len()
+    );
     println!("- output notes: {}", details.output_notes.num_notes());
 
     if verbose {
@@ -85,9 +101,28 @@ fn render_transaction(tx: &TransactionRecord, verbose: bool) {
             }
         }
         if !details.output_notes.is_empty() {
-            println!("- output note ids:");
+            println!("- output notes:");
             for (idx, note) in details.output_notes.iter().enumerate() {
-                println!("  [{idx}] {}", note.id());
+                let kind = match note {
+                    OutputNote::Full(_) => "full",
+                    OutputNote::Partial(_) => "partial",
+                    OutputNote::Header(_) => "header",
+                };
+                println!("  [{idx}] {} ({kind})", note.id());
+                if let Some(recipient) = note.recipient() {
+                    let script_root = recipient.script().root();
+                    let script_label = match well_known_label_from_root(&script_root) {
+                        Some(label) => format!("{script_root} ({label})"),
+                        None => script_root.to_string(),
+                    };
+                    println!("    script root: {script_label}");
+                    render_well_known_inputs(
+                        &script_root,
+                        recipient.inputs().values(),
+                        "    ",
+                        "      ",
+                    );
+                }
             }
         }
     }

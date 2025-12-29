@@ -20,20 +20,26 @@ pub(crate) fn inspect_store_account(store_path: PathBuf, query: StoreAccountQuer
             let id_value: i64 = id_value
                 .try_into()
                 .map_err(|_| anyhow!("account id out of range for sqlite storage"))?;
-            query_accounts(&conn, "SELECT * FROM accounts WHERE id = ?", params![id_value])?
-        }
-        StoreAccountQuery::Commitment(commitment) => {
             query_accounts(
                 &conn,
-                "SELECT * FROM accounts WHERE account_commitment = ?",
-                params![commitment],
+                "SELECT * FROM accounts WHERE id = ?",
+                params![id_value],
             )?
         }
+        StoreAccountQuery::Commitment(commitment) => query_accounts(
+            &conn,
+            "SELECT * FROM accounts WHERE account_commitment = ?",
+            params![commitment],
+        )?,
         StoreAccountQuery::Nonce(nonce) => {
             let nonce: i64 = nonce
                 .try_into()
                 .map_err(|_| anyhow!("nonce out of range for sqlite storage"))?;
-            query_accounts(&conn, "SELECT * FROM accounts WHERE nonce = ?", params![nonce])?
+            query_accounts(
+                &conn,
+                "SELECT * FROM accounts WHERE nonce = ?",
+                params![nonce],
+            )?
         }
     };
 

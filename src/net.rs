@@ -6,7 +6,10 @@ use crate::{cli::Network, parse};
 pub(crate) const DEFAULT_TIMEOUT_MS: u64 = 10_000;
 
 /// Resolve an RPC endpoint based on the CLI network selection and optional override.
-pub(crate) fn resolve_endpoint(network: Network, custom_endpoint: Option<String>) -> Result<Endpoint> {
+pub(crate) fn resolve_endpoint(
+    network: Network,
+    custom_endpoint: Option<String>,
+) -> Result<Endpoint> {
     match network {
         Network::Testnet => Ok(Endpoint::testnet()),
         Network::Devnet => Ok(Endpoint::devnet()),

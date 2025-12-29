@@ -25,7 +25,6 @@ Networks:
 
 Completions:
 ```bash
-distaff completions zsh
 ```
 
 ## Development

@@ -2,14 +2,8 @@ use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
 use miden_client::store::{
-    InputNoteRecord,
-    InputNoteState,
-    NoteFilter,
-    OutputNoteRecord,
-    OutputNoteState,
-    PartialBlockchainFilter,
-    Store,
-    TransactionFilter,
+    InputNoteRecord, InputNoteState, NoteFilter, OutputNoteRecord, OutputNoteState,
+    PartialBlockchainFilter, Store, TransactionFilter,
 };
 use miden_client::transaction::TransactionStatusVariant;
 use miden_client_sqlite_store::SqliteStore;
@@ -60,7 +54,10 @@ fn print_accounts(conn: &Connection, stats: &StoreStats) -> Result<()> {
     if let Some(max_nonce) = max_nonce {
         println!("- max nonce: {}", max_nonce);
     }
-    println!("- tracked accounts: {}", query_u64(conn, "SELECT COUNT(*) FROM tracked_accounts")?);
+    println!(
+        "- tracked accounts: {}",
+        query_u64(conn, "SELECT COUNT(*) FROM tracked_accounts")?
+    );
     println!("- addresses: {}", stats.addresses);
     println!("- states per account:");
     for (account_id, count) in query_grouped_counts(conn, "accounts", "id")? {
@@ -80,7 +77,10 @@ fn print_notes(stats: &StoreStats) -> Result<()> {
         println!("- output state {}: {}", label, count);
     }
     println!("- output notes unspent: {}", stats.output_unspent);
-    println!("- output notes with nullifier: {}", stats.output_with_nullifier);
+    println!(
+        "- output notes with nullifier: {}",
+        stats.output_with_nullifier
+    );
     println!("- note tags: {}", stats.note_tags_total);
     println!("- unique note tags: {}", stats.unique_note_tags_total);
     Ok(())
@@ -95,9 +95,15 @@ fn print_chain(conn: &Connection, stats: &StoreStats) -> Result<()> {
     if let Some(max_block) = max_block {
         println!("- max block: {}", max_block);
     }
-    println!("- blocks with client notes: {}", stats.tracked_block_headers);
+    println!(
+        "- blocks with client notes: {}",
+        stats.tracked_block_headers
+    );
     println!("- last state sync: {}", stats.sync_height);
-    println!("- partial blockchain nodes: {}", stats.partial_blockchain_nodes);
+    println!(
+        "- partial blockchain nodes: {}",
+        stats.partial_blockchain_nodes
+    );
     Ok(())
 }
 
@@ -145,13 +151,15 @@ fn query_u64_opt(conn: &Connection, sql: &str) -> Result<Option<u64>> {
     Ok(value.and_then(|val| val.try_into().ok()))
 }
 
-fn query_grouped_counts(conn: &Connection, table: &str, column: &str) -> Result<Vec<(i64, u64)>> {
-    let sql = format!(
-        "SELECT {column}, COUNT(*) FROM {table} GROUP BY {column} ORDER BY {column}"
-    );
+fn query_grouped_counts(
+    conn: &Connection,
+    table: &str,
+    column: &str,
+) -> Result<Vec<(String, u64)>> {
+    let sql = format!("SELECT {column}, COUNT(*) FROM {table} GROUP BY {column} ORDER BY {column}");
     let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map([], |row| {
-        let key: i64 = row.get(0)?;
+        let key: String = row.get(0)?;
         let count: i64 = row.get(1)?;
         Ok((key, count.try_into().unwrap_or(0)))
     })?;
@@ -191,9 +199,11 @@ async fn collect_store_stats(store: &SqliteStore) -> Result<StoreStats> {
     let input_notes = store.get_input_notes(NoteFilter::All).await?;
     let output_notes = store.get_output_notes(NoteFilter::All).await?;
 
-    let (input_note_states, output_note_states) =
-        count_note_states(&input_notes, &output_notes);
-    let output_unspent = output_notes.iter().filter(|note| !note.is_consumed()).count() as u64;
+    let (input_note_states, output_note_states) = count_note_states(&input_notes, &output_notes);
+    let output_unspent = output_notes
+        .iter()
+        .filter(|note| !note.is_consumed())
+        .count() as u64;
     let output_with_nullifier = output_notes
         .iter()
         .filter(|note| note.nullifier().is_some())

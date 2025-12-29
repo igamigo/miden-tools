@@ -1,15 +1,15 @@
 use std::path::PathBuf;
 
 use anyhow::{Result, anyhow};
-use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
-use clap_complete::Shell;
-use std::io;
-
+use clap::{Parser, Subcommand, ValueEnum};
 use miden_client::address::Address;
 
 use crate::{
-    account, inspect, net, parse, rpc_tools, store_account, store_inspect, tx_inspect, word,
+    account, inspect, net, parse, rpc_tools, store_account, store_inspect, store_note, tx_inspect,
+    word,
 };
+#[cfg(feature = "tui")]
+use crate::store_tui;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -53,11 +53,6 @@ pub enum Command {
         /// Provide one 0x-prefixed 32-byte word or four felts (decimal or 0x-hex)
         #[arg(num_args = 1..=4, value_name = "value")]
         values: Vec<String>,
-    },
-    /// Generate shell completion scripts
-    Completions {
-        /// Target shell
-        shell: Shell,
     },
     /// Resolve an account ID from a bech32 address or 0x-hex account id
     AccountId {
@@ -130,10 +125,25 @@ pub enum StoreCommand {
         #[arg(long)]
         nonce: Option<u64>,
     },
+    /// Inspect a note in a local store by its id
+    Note {
+        /// Note id (0x-hex)
+        note_id: String,
+        /// Path to the sqlite3 store file
+        #[arg(long, value_name = "path")]
+        store: PathBuf,
+    },
     /// Transaction-related store commands
     Tx {
         #[command(subcommand)]
         command: StoreTxCommand,
+    },
+    /// Interactive store browser (requires --features tui)
+    #[cfg(feature = "tui")]
+    Tui {
+        /// Path to the sqlite3 store file
+        #[arg(long, value_name = "path")]
+        store: PathBuf,
     },
 }
 
@@ -239,6 +249,10 @@ impl Cli {
                     };
                     store_account::inspect_store_account(store, query)
                 }
+                StoreCommand::Note { store, note_id } => {
+                    let note_id = parse::note_id(&note_id)?;
+                    store_note::inspect_store_note(store, note_id)
+                }
                 StoreCommand::Tx { command } => match command {
                     StoreTxCommand::Inspect {
                         tx_id,
@@ -250,22 +264,17 @@ impl Cli {
                     }
                     StoreTxCommand::List { store } => tx_inspect::list_transactions(store),
                 },
+                #[cfg(feature = "tui")]
+                StoreCommand::Tui { store } => store_tui::run_store_tui(store),
             },
             Command::Word { values } => {
                 let word = parse::word(&values)?;
                 word::build_word(word)
             }
-            Command::Completions { shell } => {
-                let mut cmd = Cli::command();
-                clap_complete::generate(shell, &mut cmd, "distaff", &mut io::stdout());
-                Ok(())
-            }
             Command::AccountId { account, network } => {
                 let decoded_address = Address::decode(&account).ok();
                 let (account_id, network_hint) = parse::account_id(&account)?;
-                let selected_network_id = network
-                    .clone()
-                    .and_then(net::network_id_for_cli_network);
+                let selected_network_id = network.clone().and_then(net::network_id_for_cli_network);
 
                 println!("Account ID: {}", account_id);
                 println!("- account id (hex): {}", account_id.to_hex());
@@ -273,10 +282,13 @@ impl Cli {
                 println!("- storage mode: {}", account_id.storage_mode());
                 println!(
                     "- public state: {}",
-                    if account_id.has_public_state() { "yes" } else { "no" }
+                    if account_id.has_public_state() {
+                        "yes"
+                    } else {
+                        "no"
+                    }
                 );
-                println!("- faucet: {}", if account_id.is_faucet() { "yes" } else { "no" });
-                println!("- version: {:?}", account_id.version());
+                println!("- account ID version: {:?}", account_id.version());
 
                 if let Some((address_network, address)) = decoded_address {
                     if let Some(expected) = selected_network_id.clone() {
