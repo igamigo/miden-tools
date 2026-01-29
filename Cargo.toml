@@ -16,6 +16,7 @@ tokio = { version = "1.48", features = ["rt-multi-thread"] }
 rusqlite = { version = "0.36", features = ["bundled"] }
 ratatui = { version = "0.27", optional = true }
 crossterm = { version = "0.27", optional = true }
+dirs = "6"
 
 # TODO: remove this. It was needed for SparseMerklePath but it should be re-exported from client
 miden-crypto = "0.18.4"

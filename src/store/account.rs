@@ -2,7 +2,10 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result, anyhow};
 use miden_client::account::AccountId;
+use miden_client::store::Store;
+use miden_client_sqlite_store::SqliteStore;
 use rusqlite::{Connection, params};
+use tokio::runtime::Runtime;
 
 pub(crate) enum StoreAccountQuery {
     AccountId(AccountId),
@@ -54,6 +57,36 @@ pub(crate) fn inspect_store_account(store_path: PathBuf, query: StoreAccountQuer
     }
 
     Ok(())
+}
+
+pub(crate) fn list_store_accounts(store_path: PathBuf) -> Result<()> {
+    let rt = Runtime::new()?;
+    rt.block_on(async move {
+        let store = SqliteStore::new(store_path.clone())
+            .await
+            .with_context(|| format!("failed to open store at {}", store_path.display()))?;
+
+        let accounts = store.get_account_headers().await?;
+        if accounts.is_empty() {
+            println!("No accounts found");
+            return Ok(());
+        }
+
+        println!("Accounts:");
+        for (header, status) in accounts {
+            let account_id = header.id();
+            println!(
+                "- {} nonce={} status={} mode={} type={:?}",
+                account_id,
+                header.nonce().as_int(),
+                status,
+                account_id.storage_mode(),
+                account_id.account_type()
+            );
+        }
+
+        Ok(())
+    })
 }
 
 #[derive(Debug)]

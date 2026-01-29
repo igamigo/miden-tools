@@ -1,10 +1,14 @@
+use std::collections::HashMap;
+
 use anyhow::{Context, Result};
-use miden_client::store::{Store, TransactionFilter};
+use miden_client::note::{NoteId, Nullifier};
+use miden_client::store::{InputNoteRecord, NoteFilter, OutputNoteRecord, Store, TransactionFilter};
 use miden_client::transaction::{OutputNote, TransactionRecord};
 use miden_client_sqlite_store::SqliteStore;
 use tokio::runtime::Runtime;
 
 use crate::render::note::{render_well_known_inputs, well_known_label_from_root};
+use crate::store::note::{render_input_note, render_output_note};
 
 pub(crate) fn inspect_transaction(
     store_path: std::path::PathBuf,
@@ -32,7 +36,12 @@ pub(crate) fn inspect_transaction(
                 println!();
             }
             first = false;
-            render_transaction(&tx, verbose);
+            let notes = if verbose {
+                Some(load_transaction_notes(&store, &tx.details).await?)
+            } else {
+                None
+            };
+            render_transaction(&tx, verbose, notes.as_ref());
         }
 
         Ok(())
@@ -61,7 +70,7 @@ pub(crate) fn list_transactions(store_path: std::path::PathBuf) -> Result<()> {
     })
 }
 
-fn render_transaction(tx: &TransactionRecord, verbose: bool) {
+fn render_transaction(tx: &TransactionRecord, verbose: bool, notes: Option<&TransactionNotes>) {
     let details = &tx.details;
     println!("Transaction {}:", tx.id);
     println!("- status: {}", tx.status);
@@ -123,6 +132,138 @@ fn render_transaction(tx: &TransactionRecord, verbose: bool) {
                         "      ",
                     );
                 }
+            }
+        }
+        if let Some(notes) = notes {
+            render_transaction_notes(notes);
+        }
+    }
+}
+
+struct TransactionNotes {
+    input_notes: Vec<(Nullifier, Option<InputNoteRecord>)>,
+    output_notes: Vec<(NoteId, Option<OutputNoteRecord>)>,
+}
+
+async fn load_transaction_notes(
+    store: &SqliteStore,
+    details: &miden_client::transaction::TransactionDetails,
+) -> Result<TransactionNotes> {
+    let input_nullifiers: Vec<Nullifier> = details
+        .input_note_nullifiers
+        .iter()
+        .copied()
+        .map(Nullifier::from)
+        .collect();
+    let input_notes = if input_nullifiers.is_empty() {
+        Vec::new()
+    } else {
+        store
+            .get_input_notes(NoteFilter::Nullifiers(input_nullifiers.clone()))
+            .await?
+    };
+
+    let mut input_by_nullifier: HashMap<Nullifier, InputNoteRecord> = HashMap::new();
+    for note in input_notes {
+        input_by_nullifier.insert(note.nullifier(), note);
+    }
+
+    let input_notes = input_nullifiers
+        .iter()
+        .map(|nullifier| (*nullifier, input_by_nullifier.remove(nullifier)))
+        .collect();
+
+    let output_note_ids: Vec<NoteId> = details
+        .output_notes
+        .iter()
+        .map(|note| note.id())
+        .collect();
+    let output_notes = if output_note_ids.is_empty() {
+        Vec::new()
+    } else {
+        store
+            .get_output_notes(NoteFilter::List(output_note_ids.clone()))
+            .await?
+    };
+
+    let mut output_by_id: HashMap<NoteId, OutputNoteRecord> = HashMap::new();
+    for note in output_notes {
+        output_by_id.insert(note.id(), note);
+    }
+
+    let output_notes = output_note_ids
+        .iter()
+        .map(|note_id| (*note_id, output_by_id.remove(note_id)))
+        .collect();
+
+    Ok(TransactionNotes {
+        input_notes,
+        output_notes,
+    })
+}
+
+fn render_transaction_notes(notes: &TransactionNotes) {
+    let has_input = !notes.input_notes.is_empty();
+    let has_output = !notes.output_notes.is_empty();
+    if !has_input && !has_output {
+        return;
+    }
+
+    println!();
+    if has_input {
+        render_input_notes(&notes.input_notes);
+        if has_output {
+            println!();
+        }
+    }
+    if has_output {
+        render_output_notes(&notes.output_notes);
+    }
+}
+
+fn render_input_notes(notes: &[(Nullifier, Option<InputNoteRecord>)]) {
+    if notes.is_empty() {
+        return;
+    }
+
+    println!("Input notes (store):");
+    let mut printed_any = false;
+    for (nullifier, note) in notes {
+        match note {
+            Some(note) => {
+                if printed_any {
+                    println!();
+                }
+                render_input_note(note);
+                printed_any = true;
+            }
+            None => {
+                println!("- missing input note for nullifier {nullifier}");
+                printed_any = true;
+            }
+        }
+    }
+}
+
+fn render_output_notes(notes: &[(NoteId, Option<OutputNoteRecord>)]) {
+    if notes.is_empty() {
+        return;
+    }
+
+    println!("Output notes (store):");
+    let mut printed_any = false;
+    for (note_id, note) in notes {
+        match note {
+            Some(note) => {
+                if printed_any {
+                    println!();
+                }
+                render_output_note(note);
+                printed_any = true;
+            }
+            None => {
+                println!("- missing output note for id {note_id}");
+                printed_any = true;
             }
         }
     }

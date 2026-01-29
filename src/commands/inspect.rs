@@ -17,7 +17,11 @@ use crate::render::note::{
 };
 use crate::util::net::DEFAULT_TIMEOUT_MS;
 
-pub(crate) fn inspect_note(note_id: NoteId, endpoint: Endpoint) -> Result<()> {
+pub(crate) fn inspect_note(
+    note_id: NoteId,
+    endpoint: Endpoint,
+    save: Option<PathBuf>,
+) -> Result<()> {
     let rt = Runtime::new()?;
     rt.block_on(async move {
         let rpc = GrpcClient::new(&endpoint, DEFAULT_TIMEOUT_MS);
@@ -26,6 +30,34 @@ pub(crate) fn inspect_note(note_id: NoteId, endpoint: Endpoint) -> Result<()> {
                 if notes.is_empty() {
                     println!("Note {note_id} not found on {endpoint}");
                     return Ok(());
+                }
+                if let Some(save_path) = save {
+                    if notes.len() > 1 {
+                        println!(
+                            "Warning: received {} notes for {note_id}; using the first",
+                            notes.len()
+                        );
+                    }
+                    let (note_file, warning) = match &notes[0] {
+                        miden_client::rpc::domain::note::FetchedNote::Public(note, proof) => {
+                            (NoteFile::NoteWithProof(note.clone(), proof.clone()), None)
+                        }
+                        miden_client::rpc::domain::note::FetchedNote::Private(
+                            id,
+                            _metadata,
+                            _proof,
+                        ) => (
+                            NoteFile::NoteId(*id),
+                            Some("note is private; saved NoteId-only NoteFile"),
+                        ),
+                    };
+                    note_file.write(&save_path).with_context(|| {
+                        format!("failed to write note file to {}", save_path.display())
+                    })?;
+                    println!("Saved NoteFile to {}", save_path.display());
+                    if let Some(message) = warning {
+                        println!("- warning: {}", message);
+                    }
                 }
                 for note in notes {
                     render_fetched_note(&note);

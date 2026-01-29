@@ -15,10 +15,19 @@ pub(crate) fn resolve_endpoint(
         Network::Devnet => Ok(Endpoint::devnet()),
         Network::Local => Ok(Endpoint::localhost()),
         Network::Custom => {
-            let raw = custom_endpoint
-                .ok_or_else(|| anyhow!("--endpoint is required for custom network"))?;
+            let raw = custom_endpoint.ok_or_else(|| {
+                anyhow!(
+                    "--endpoint is required when using --network custom\n  \
+                    hint: Specify an endpoint like --endpoint https://rpc.example.com:8080"
+                )
+            })?;
 
-            parse::endpoint_parameter(raw.as_str())
+            parse::endpoint_parameter(raw.as_str()).map_err(|e| {
+                anyhow!(
+                    "{e}\n  hint: Endpoints should be in format: protocol://host[:port]\n  \
+                    examples: https://rpc.example.com, http://localhost:57291"
+                )
+            })
         }
     }
 }

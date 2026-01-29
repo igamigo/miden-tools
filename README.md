@@ -10,11 +10,13 @@ distaff file <path> --validate --network testnet
 distaff rpc status
 distaff rpc note <note-id> --network testnet
 distaff rpc account <address-or-account-id> --network devnet --verbose
+distaff block import <block-num> --store <path-to-sqlite>
 distaff store inspect --store <path-to-sqlite>
 distaff store tx inspect <tx-id> --store <path-to-sqlite> --verbose
 distaff store tx list --store <path-to-sqlite>
 distaff store account --store <path-to-sqlite> --account <address-or-id>
-distaff word <felt1> <felt2> <felt3> <felt4>
+distaff parse word <felt1> <felt2> <felt3> <felt4>
+distaff parse account-id <address-or-account-id> --network testnet
 ```
 
 Networks:
