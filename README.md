@@ -2,57 +2,93 @@
 
 Lightweight CLI utilities for inspecting Miden files, local stores, and RPC endpoints.
 
-## Usage
+## Installation
 
 ```bash
-# Inspect files
+# From source
+git clone https://github.com/youruser/miden-tools.git
+cd miden-tools
+make install
+```
+
+## Configuration
+
+Distaff automatically reads `miden-client` configuration if present:
+- `.miden/miden-client.toml` (local directory)
+- `~/.miden/miden-client.toml` (global)
+
+When a config is found, store path and RPC endpoint are used as defaults. You can override them with `--store` and `--network`/`--endpoint` flags.
+
+## Usage
+
+### Inspect Files
+
+Inspect serialized note or account files:
+
+```bash
 distaff inspect <path-to-note-or-account-file>
 distaff inspect <path> --validate --network testnet
+```
 
-# RPC commands
+### RPC Commands
+
+Query Miden nodes directly:
+
+```bash
 distaff rpc status --network testnet
 distaff rpc block <block-num> --network testnet
 distaff rpc note <note-id> --network testnet
-distaff rpc account <address-or-account-id> --network devnet --verbose
-
-# Store commands
-distaff store path
-distaff store info --store <path-to-sqlite>
-distaff store account list --store <path-to-sqlite>
-distaff store account get --account <address-or-id> --store <path-to-sqlite>
-distaff store note list --store <path-to-sqlite>
-distaff store note get <note-id> --store <path-to-sqlite>
-distaff store tag list --store <path-to-sqlite>
-distaff store tx list --store <path-to-sqlite>
-distaff store tx inspect <tx-id> --store <path-to-sqlite> --verbose
-distaff store tui --store <path-to-sqlite>
-
-# Parsing helpers
-distaff parse word <felt1> <felt2> <felt3> <felt4>
-distaff parse account-id <address-or-account-id> --network testnet
-distaff parse address <bech32-or-account-id> --network testnet
-distaff parse note-tag <tag>
+distaff rpc account <address-or-account-id> --verbose
 ```
 
-Networks:
+### Store Commands
+
+Inspect local miden-client sqlite stores:
+
+```bash
+distaff store path                                    # Print default store path
+distaff store info                                    # Print store summary
+distaff store account list                            # List tracked accounts
+distaff store account get --account <address-or-id>   # Get account details
+distaff store note list                               # List notes
+distaff store note get <note-id>                      # Get note details
+distaff store tag list                                # List tracked note tags
+distaff store tx list                                 # List transactions
+distaff store tx inspect <tx-id> --verbose            # Inspect transaction
+distaff store tui                                     # Interactive store browser
+```
+
+Use `--store <path>` to specify a custom store path.
+
+### Parsing Helpers
+
+Parse and convert common Miden formats:
+
+```bash
+distaff parse word <felt1> <felt2> <felt3> <felt4>    # Build word from felts
+distaff parse account-id <address-or-id>              # Parse account ID
+distaff parse address <bech32-or-id> --network testnet
+distaff parse note-tag <tag>                          # Parse note tag
+```
+
+### Networks
+
 - `testnet` (default)
 - `devnet`
 - `local`
 - `custom` (requires `--endpoint protocol://host[:port]`)
 
-Completions:
-```bash
-```
-
 ## Development
 
-- `make format` – format the workspace
-- `make clippy` – lint with warnings denied
-- `make test` – run tests
-- `make install` – install the CLI locally
+```bash
+make help       # Show all commands
+make format     # Format with rustfmt (nightly)
+make clippy     # Lint with warnings denied
+make test       # Run tests
+make install    # Install locally
+```
 
 ## Notes
 
 - Built against `miden-client` `0.13`.
 - Licensed under MIT (see `LICENSE`).
-- Reference coding guidelines: https://github.com/0xMiden/miden-client/blob/next/CONTRIBUTING.md.
