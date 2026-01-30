@@ -7,7 +7,7 @@ use miden_client::store::{
 };
 use miden_client::transaction::TransactionStatusVariant;
 use miden_client_sqlite_store::SqliteStore;
-use rusqlite::{Connection, OptionalExtension};
+use rusqlite::Connection;
 use tokio::runtime::Runtime;
 
 /// Print the default store path for this platform.
@@ -176,7 +176,7 @@ fn query_u64(conn: &Connection, sql: &str) -> Result<u64> {
 }
 
 fn query_u64_opt(conn: &Connection, sql: &str) -> Result<Option<u64>> {
-    let value: Option<i64> = conn.query_row(sql, [], |row| row.get(0)).optional()?;
+    let value: Option<i64> = conn.query_row(sql, [], |row| row.get::<_, Option<i64>>(0))?;
     Ok(value.and_then(|val| val.try_into().ok()))
 }
 

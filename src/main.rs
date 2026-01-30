@@ -4,8 +4,8 @@ use clap::Parser;
 use crate::cli::Cli;
 
 mod cli;
-mod commands;
 mod render;
+mod rpc;
 mod store;
 mod util;
 

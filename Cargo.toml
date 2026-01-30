@@ -1,5 +1,5 @@
 [package]
-name = "miden-distaff"
+name    = "miden-distaff"
 version = "0.1.0"
 edition = "2024"
 
@@ -8,19 +8,15 @@ name = "distaff"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0"
-clap = { version = "4.5", features = ["derive"] }
-miden-client = { version = "0.13", features = ["tonic"] }
+anyhow                    = { version = "1.0" }
+clap                      = { features = ["derive"], version = "4.5" }
+crossterm                 = { version = "0.27" }
+dirs                      = { version = "6" }
+miden-client              = { features = ["tonic"], version = "0.13" }
+miden-client-cli          = { version = "0.13" }
 miden-client-sqlite-store = { version = "0.13" }
-tokio = { version = "1.48", features = ["rt-multi-thread"] }
-rusqlite = { version = "0.36", features = ["bundled"] }
-ratatui = { version = "0.27", optional = true }
-crossterm = { version = "0.27", optional = true }
-dirs = "6"
-
-# TODO: remove this. It was needed for SparseMerklePath but it should be re-exported from client
-miden-crypto = "0.19"
-miden-protocol = "0.13"
-
-[features]
-tui = ["ratatui", "crossterm"]
+miden-crypto              = { version = "0.19" }
+miden-protocol            = { version = "0.13" }
+ratatui                   = { version = "0.27" }
+rusqlite                  = { features = ["bundled"], version = "0.36" }
+tokio                     = { features = ["rt-multi-thread"], version = "1.48" }

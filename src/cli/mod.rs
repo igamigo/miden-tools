@@ -1,17 +1,11 @@
+//! CLI definitions using clap.
+
 use std::path::PathBuf;
 
-use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand, ValueEnum};
-use miden_client::address::{Address, AddressId};
-use miden_client::note::{NoteTag, NoteType};
+use miden_client::note::NoteType;
 
-#[cfg(feature = "tui")]
-use crate::store::tui as store_tui;
-use crate::{
-    commands::{account, inspect, rpc, tx, word},
-    store,
-    util::{net, parse},
-};
+mod execute;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -33,9 +27,9 @@ pub enum Command {
         /// Validate the note against a node (fetch inclusion info, nullifier status)
         #[arg(long, default_value_t = false)]
         validate: bool,
-        /// Network to use when validating
-        #[arg(long, value_enum, default_value = "testnet")]
-        network: Network,
+        /// Network to use when validating (falls back to config)
+        #[arg(long, value_enum)]
+        network: Option<Network>,
         /// Custom endpoint (protocol://host[:port]) when --network custom
         #[arg(long)]
         endpoint: Option<String>,
@@ -61,9 +55,9 @@ pub enum Command {
 pub enum RpcCommand {
     /// Query basic status information from the node
     Status {
-        /// Network to query
-        #[arg(long, value_enum, default_value = "testnet")]
-        network: Network,
+        /// Network to query (falls back to config)
+        #[arg(long, value_enum)]
+        network: Option<Network>,
         /// Custom endpoint (protocol://host[:port]) when --network custom
         #[arg(long)]
         endpoint: Option<String>,
@@ -72,9 +66,9 @@ pub enum RpcCommand {
     Block {
         /// Block number (decimal or 0x-hex)
         block_num: String,
-        /// Network to query
-        #[arg(long, value_enum, default_value = "testnet")]
-        network: Network,
+        /// Network to query (falls back to config)
+        #[arg(long, value_enum)]
+        network: Option<Network>,
         /// Custom endpoint (protocol://host[:port]) when --network custom
         #[arg(long)]
         endpoint: Option<String>,
@@ -86,9 +80,9 @@ pub enum RpcCommand {
         /// Save fetched note as a NoteFile
         #[arg(long, value_name = "path")]
         save: Option<PathBuf>,
-        /// Network to query
-        #[arg(long, value_enum, default_value = "testnet")]
-        network: Network,
+        /// Network to query (falls back to config)
+        #[arg(long, value_enum)]
+        network: Option<Network>,
         /// Custom endpoint (protocol://host[:port]) when --network custom
         #[arg(long)]
         endpoint: Option<String>,
@@ -100,9 +94,9 @@ pub enum RpcCommand {
         /// Print extended account details
         #[arg(long, default_value_t = false)]
         verbose: bool,
-        /// Network to query
-        #[arg(long, value_enum, default_value = "testnet")]
-        network: Network,
+        /// Network to query (falls back to config)
+        #[arg(long, value_enum)]
+        network: Option<Network>,
         /// Custom endpoint (protocol://host[:port]) when --network custom
         #[arg(long)]
         endpoint: Option<String>,
@@ -115,9 +109,9 @@ pub enum StoreCommand {
     Path,
     /// Print store summary and statistics
     Info {
-        /// Path to the sqlite3 store file
+        /// Path to the sqlite3 store file (falls back to config)
         #[arg(long, value_name = "path")]
-        store: PathBuf,
+        store: Option<PathBuf>,
     },
     /// Account-related store commands
     Account {
@@ -139,12 +133,11 @@ pub enum StoreCommand {
         #[command(subcommand)]
         command: StoreTxCommand,
     },
-    /// Interactive store browser (requires --features tui)
-    #[cfg(feature = "tui")]
+    /// Interactive store browser
     Tui {
-        /// Path to the sqlite3 store file
+        /// Path to the sqlite3 store file (falls back to config)
         #[arg(long, value_name = "path")]
-        store: PathBuf,
+        store: Option<PathBuf>,
     },
 }
 
@@ -183,9 +176,9 @@ pub enum ParseCommand {
 pub enum StoreAccountCommand {
     /// Get account details by ID, commitment, or nonce
     Get {
-        /// Path to the sqlite3 store file
+        /// Path to the sqlite3 store file (falls back to config)
         #[arg(long, value_name = "path")]
-        store: PathBuf,
+        store: Option<PathBuf>,
         /// Account address (bech32) or account ID (0x-hex)
         #[arg(long)]
         account: Option<String>,
@@ -198,9 +191,9 @@ pub enum StoreAccountCommand {
     },
     /// List tracked accounts from a local store
     List {
-        /// Path to the sqlite3 store file
+        /// Path to the sqlite3 store file (falls back to config)
         #[arg(long, value_name = "path")]
-        store: PathBuf,
+        store: Option<PathBuf>,
     },
 }
 
@@ -210,15 +203,15 @@ pub enum StoreNoteCommand {
     Get {
         /// Note id (0x-hex)
         note_id: String,
-        /// Path to the sqlite3 store file
+        /// Path to the sqlite3 store file (falls back to config)
         #[arg(long, value_name = "path")]
-        store: PathBuf,
+        store: Option<PathBuf>,
     },
     /// List notes from a local store
     List {
-        /// Path to the sqlite3 store file
+        /// Path to the sqlite3 store file (falls back to config)
         #[arg(long, value_name = "path")]
-        store: PathBuf,
+        store: Option<PathBuf>,
         /// Include input notes
         #[arg(long, default_value_t = false)]
         input: bool,
@@ -241,9 +234,9 @@ pub enum StoreNoteCommand {
 pub enum StoreTagCommand {
     /// List tracked note tags from a local store
     List {
-        /// Path to the sqlite3 store file
+        /// Path to the sqlite3 store file (falls back to config)
         #[arg(long, value_name = "path")]
-        store: PathBuf,
+        store: Option<PathBuf>,
     },
 }
 
@@ -253,18 +246,18 @@ pub enum StoreTxCommand {
     Inspect {
         /// Transaction id (0x-hex)
         tx_id: String,
-        /// Path to the sqlite3 store file
+        /// Path to the sqlite3 store file (falls back to config)
         #[arg(long, value_name = "path")]
-        store: PathBuf,
+        store: Option<PathBuf>,
         /// Print extended transaction details
         #[arg(long, default_value_t = false)]
         verbose: bool,
     },
     /// List transactions from a local store
     List {
-        /// Path to the sqlite3 store file
+        /// Path to the sqlite3 store file (falls back to config)
         #[arg(long, value_name = "path")]
-        store: PathBuf,
+        store: Option<PathBuf>,
     },
 }
 
@@ -284,279 +277,11 @@ pub enum NoteTypeFilter {
 }
 
 impl NoteTypeFilter {
-    fn to_note_type(self) -> NoteType {
+    pub(crate) fn to_note_type(self) -> NoteType {
         match self {
             NoteTypeFilter::Public => NoteType::Public,
             NoteTypeFilter::Private => NoteType::Private,
             NoteTypeFilter::Encrypted => NoteType::Encrypted,
-        }
-    }
-}
-
-impl Cli {
-    pub fn execute(self) -> Result<()> {
-        match self.command {
-            Command::Inspect {
-                file_path,
-                validate,
-                network,
-                endpoint,
-            } => {
-                let endpoint = if validate {
-                    Some(net::resolve_endpoint(network, endpoint)?)
-                } else {
-                    None
-                };
-                inspect::inspect(file_path, endpoint)
-            }
-            Command::Rpc { command } => match command {
-                RpcCommand::Status { network, endpoint } => {
-                    let endpoint = net::resolve_endpoint(network, endpoint)?;
-                    rpc::rpc_status(endpoint)
-                }
-                RpcCommand::Block {
-                    block_num,
-                    network,
-                    endpoint,
-                } => {
-                    let block_num = parse::block_number(&block_num)?;
-                    let endpoint = net::resolve_endpoint(network, endpoint)?;
-                    rpc::rpc_block(endpoint, block_num)
-                }
-                RpcCommand::Note {
-                    note_id,
-                    save,
-                    network,
-                    endpoint,
-                } => {
-                    let note_id = parse::note_id(&note_id)?;
-                    let endpoint = net::resolve_endpoint(network, endpoint)?;
-                    inspect::inspect_note(note_id, endpoint, save)
-                }
-                RpcCommand::Account {
-                    account,
-                    verbose,
-                    network,
-                    endpoint,
-                } => {
-                    let (account_id, address_network_hint) = parse::account_id(&account)?;
-                    let selected_network_id = net::network_id_for_cli_network(network.clone());
-                    let endpoint = net::resolve_endpoint(network, endpoint)?;
-                    account::inspect_account(
-                        account_id,
-                        address_network_hint,
-                        selected_network_id,
-                        verbose,
-                        endpoint,
-                    )
-                }
-            },
-            Command::Store { command } => match command {
-                StoreCommand::Path => store::inspect::print_default_store_path(),
-                StoreCommand::Info { store } => store::inspect::inspect_store(store),
-                StoreCommand::Account { command } => match command {
-                    StoreAccountCommand::Get {
-                        store,
-                        account,
-                        commitment,
-                        nonce,
-                    } => {
-                        let query = match (account, commitment, nonce) {
-                            (Some(account), None, None) => {
-                                let (account_id, _) = parse::account_id(&account)?;
-                                store::account::StoreAccountQuery::AccountId(account_id)
-                            }
-                            (None, Some(commitment), None) => {
-                                store::account::StoreAccountQuery::Commitment(commitment)
-                            }
-                            (None, None, Some(nonce)) => {
-                                store::account::StoreAccountQuery::Nonce(nonce)
-                            }
-                            _ => {
-                                return Err(anyhow!(
-                                    "provide exactly one of --account, --commitment, or --nonce"
-                                ));
-                            }
-                        };
-                        store::account::inspect_store_account(store, query)
-                    }
-                    StoreAccountCommand::List { store } => {
-                        store::account::list_store_accounts(store)
-                    }
-                },
-                StoreCommand::Note { command } => match command {
-                    StoreNoteCommand::Get { store, note_id } => {
-                        let note_id = parse::note_id(&note_id)?;
-                        store::note::inspect_store_note(store, note_id)
-                    }
-                    StoreNoteCommand::List {
-                        store,
-                        input,
-                        output,
-                        state,
-                        tag,
-                        note_type,
-                    } => {
-                        let tag = match tag {
-                            Some(tag) => {
-                                let value = parse::u64(&tag)?;
-                                let raw: u32 = value
-                                    .try_into()
-                                    .map_err(|_| anyhow!("note tag must fit in u32"))?;
-                                Some(NoteTag::from(raw))
-                            }
-                            None => None,
-                        };
-                        let note_type = note_type.map(NoteTypeFilter::to_note_type);
-                        let filters = store::note::NoteListFilters {
-                            include_input: input,
-                            include_output: output,
-                            states: state,
-                            tag,
-                            note_type,
-                        };
-                        store::note::list_store_notes(store, filters)
-                    }
-                },
-                StoreCommand::Tag { command } => match command {
-                    StoreTagCommand::List { store } => store::tags::list_store_tags(store),
-                },
-                StoreCommand::Tx { command } => match command {
-                    StoreTxCommand::Inspect {
-                        tx_id,
-                        store,
-                        verbose,
-                    } => {
-                        let tx_id = parse::transaction_id(&tx_id)?;
-                        tx::inspect_transaction(store, tx_id, verbose)
-                    }
-                    StoreTxCommand::List { store } => tx::list_transactions(store),
-                },
-                #[cfg(feature = "tui")]
-                StoreCommand::Tui { store } => store_tui::run_store_tui(store),
-            },
-            Command::Parse { command } => match command {
-                ParseCommand::Word { values } => {
-                    let word = parse::word(&values)?;
-                    word::build_word(word)
-                }
-                ParseCommand::AccountId { account, network } => {
-                    let decoded_address = Address::decode(&account).ok();
-                    let (account_id, network_hint) = parse::account_id(&account)?;
-                    let selected_network_id =
-                        network.clone().and_then(net::network_id_for_cli_network);
-
-                    println!("Account ID: {}", account_id);
-                    println!("- account id (hex): {}", account_id.to_hex());
-                    println!("- account type: {:?}", account_id.account_type());
-                    println!("- storage mode: {}", account_id.storage_mode());
-                    println!(
-                        "- public state: {}",
-                        if account_id.has_public_state() {
-                            "yes"
-                        } else {
-                            "no"
-                        }
-                    );
-                    println!("- account ID version: {:?}", account_id.version());
-
-                    if let Some((address_network, address)) = decoded_address {
-                        if let Some(expected) = selected_network_id.clone() {
-                            if expected != address_network {
-                                println!(
-                                    "- warning: address network {address_network} does not match selected {expected}"
-                                );
-                            }
-                        }
-                        println!("- address: {}", address.encode(address_network));
-                    } else if let Some(network_id) = selected_network_id {
-                        let address = Address::new(account_id);
-                        println!(
-                            "- address ({network_id}): {}",
-                            address.encode(network_id.clone())
-                        );
-                    }
-
-                    if let Some(network_id) = network_hint {
-                        println!("- address network: {}", network_id);
-                    }
-
-                    Ok(())
-                }
-                ParseCommand::NoteTag { tag } => {
-                    let value = parse::u64(&tag)?;
-                    let raw: u32 = value
-                        .try_into()
-                        .map_err(|_| anyhow!("note tag must fit in u32"))?;
-                    let tag = NoteTag::from(raw);
-                    println!("Note tag: {}", tag);
-                    println!("- raw (hex): 0x{raw:08x}");
-                    println!("- decoded: {}", crate::render::note::format_note_tag(tag));
-                    Ok(())
-                }
-                ParseCommand::Address { address, network } => {
-                    let selected_network_id =
-                        network.clone().and_then(net::network_id_for_cli_network);
-                    if let Ok((network_id, decoded_address)) = Address::decode(&address) {
-                        let account_id = match decoded_address.id() {
-                            AddressId::AccountId(id) => id,
-                            _ => return Err(anyhow!("unsupported address type")),
-                        };
-
-                        println!("Address: {}", address);
-                        println!("- network: {}", network_id);
-                        println!("- account id: {}", account_id);
-                        println!("- account type: {:?}", account_id.account_type());
-                        println!("- storage mode: {}", account_id.storage_mode());
-                        println!("- note tag length: {}", decoded_address.note_tag_len());
-                        println!(
-                            "- note tag: {}",
-                            crate::render::note::format_note_tag(decoded_address.to_note_tag())
-                        );
-                        if let Some(interface) = decoded_address.interface() {
-                            println!("- interface: {}", interface);
-                        }
-                        println!("- bech32: {}", decoded_address.encode(network_id.clone()));
-
-                        if let Some(expected) = selected_network_id {
-                            if expected != network_id {
-                                println!(
-                                    "- warning: address network {} does not match selected {}",
-                                    network_id, expected
-                                );
-                            }
-                        }
-
-                        Ok(())
-                    } else {
-                        let (account_id, network_hint) = parse::account_id(&address)?;
-                        let addr = Address::new(account_id);
-
-                        if let Some(network_id) = selected_network_id {
-                            let encoded = addr.encode(network_id.clone());
-                            println!("Address: {}", encoded);
-                            println!("- network: {}", network_id);
-                        } else {
-                            println!("Address (from account id):");
-                            println!("- bech32: n/a (provide --network testnet|devnet)");
-                        }
-                        println!("- account id: {}", account_id);
-                        println!("- account type: {:?}", account_id.account_type());
-                        println!("- storage mode: {}", account_id.storage_mode());
-                        println!("- note tag length: {}", addr.note_tag_len());
-                        println!(
-                            "- note tag: {}",
-                            crate::render::note::format_note_tag(addr.to_note_tag())
-                        );
-
-                        if let Some(network_id) = network_hint {
-                            println!("- address network: {}", network_id);
-                        }
-
-                        Ok(())
-                    }
-                }
-            },
         }
     }
 }

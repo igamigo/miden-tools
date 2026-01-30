@@ -6,9 +6,16 @@ help: ## Show description of all commands
 
 # Tooling
 
+.PHONY: lint
+lint: format clippy ## Run all linting tasks (format, clippy)
+
 .PHONY: format
 format: ## Format Rust sources
-	cargo fmt --all
+	cargo +nightly fmt --all
+
+.PHONY: format-check
+format-check: ## Check Rust formatting without modifying files
+	cargo +nightly fmt --all --check
 
 .PHONY: clippy
 clippy: ## Run Clippy with warnings as errors
