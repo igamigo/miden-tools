@@ -39,41 +39,6 @@ pub(crate) fn print_default_store_path() -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn print_store_stats(path: PathBuf) -> Result<()> {
-    let file_size = fs::metadata(&path).map(|meta| meta.len()).ok();
-    let conn = Connection::open(&path)
-        .with_context(|| format!("failed to open sqlite store at {}", path.display()))?;
-    let rt = Runtime::new()?;
-    let stats = rt.block_on(async {
-        let store = SqliteStore::new(path.clone()).await?;
-        collect_store_stats(&store).await
-    })?;
-
-    let block_count = query_u64(&conn, "SELECT COUNT(*) FROM block_headers")?;
-    let max_block = query_u64_opt(&conn, "SELECT MAX(block_num) FROM block_headers")?;
-
-    println!("Store stats: {}", path.display());
-    if let Some(size) = file_size {
-        println!("- file size: {} bytes", size);
-    }
-    println!("- accounts: {}", stats.distinct_account_ids);
-    println!(
-        "- notes: input {} output {} (unspent {})",
-        stats.input_notes_total, stats.output_notes_total, stats.output_unspent
-    );
-    println!("- transactions: {}", stats.transactions_total);
-    println!(
-        "- blocks: {} (sync height {})",
-        block_count, stats.sync_height
-    );
-    if let Some(max_block) = max_block {
-        println!("- max block: {}", max_block);
-    }
-    println!("- note tags (unique): {}", stats.unique_note_tags_total);
-
-    Ok(())
-}
-
 pub(crate) fn inspect_store(path: PathBuf) -> Result<()> {
     let file_size = fs::metadata(&path).map(|meta| meta.len()).ok();
     let conn = Connection::open(&path)

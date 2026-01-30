@@ -113,55 +113,26 @@ pub enum RpcCommand {
 pub enum StoreCommand {
     /// Print the default store path for this platform
     Path,
-    /// Print a condensed summary of store statistics
-    Stats {
+    /// Print store summary and statistics
+    Info {
         /// Path to the sqlite3 store file
         #[arg(long, value_name = "path")]
         store: PathBuf,
-    },
-    /// Inspect a SQLite store and print summary statistics
-    Inspect {
-        /// Path to the sqlite3 store file
-        #[arg(long, value_name = "path")]
-        store: PathBuf,
-    },
-    /// Inspect account records in a local store
-    Account {
-        /// Path to the sqlite3 store file
-        #[arg(long, value_name = "path")]
-        store: PathBuf,
-        /// Account address (bech32) or account ID (0x-hex)
-        #[arg(long)]
-        account: Option<String>,
-        /// Account commitment (0x-hex)
-        #[arg(long)]
-        commitment: Option<String>,
-        /// Account nonce (decimal)
-        #[arg(long)]
-        nonce: Option<u64>,
     },
     /// Account-related store commands
-    Accounts {
+    Account {
         #[command(subcommand)]
-        command: StoreAccountsCommand,
-    },
-    /// Inspect a note in a local store by its id
-    Note {
-        /// Note id (0x-hex)
-        note_id: String,
-        /// Path to the sqlite3 store file
-        #[arg(long, value_name = "path")]
-        store: PathBuf,
+        command: StoreAccountCommand,
     },
     /// Note-related store commands
-    Notes {
+    Note {
         #[command(subcommand)]
-        command: StoreNotesCommand,
+        command: StoreNoteCommand,
     },
     /// Tag-related store commands
-    Tags {
+    Tag {
         #[command(subcommand)]
-        command: StoreTagsCommand,
+        command: StoreTagCommand,
     },
     /// Transaction-related store commands
     Tx {
@@ -209,7 +180,22 @@ pub enum ParseCommand {
 }
 
 #[derive(Debug, Subcommand)]
-pub enum StoreAccountsCommand {
+pub enum StoreAccountCommand {
+    /// Get account details by ID, commitment, or nonce
+    Get {
+        /// Path to the sqlite3 store file
+        #[arg(long, value_name = "path")]
+        store: PathBuf,
+        /// Account address (bech32) or account ID (0x-hex)
+        #[arg(long)]
+        account: Option<String>,
+        /// Account commitment (0x-hex)
+        #[arg(long)]
+        commitment: Option<String>,
+        /// Account nonce (decimal)
+        #[arg(long)]
+        nonce: Option<u64>,
+    },
     /// List tracked accounts from a local store
     List {
         /// Path to the sqlite3 store file
@@ -219,7 +205,15 @@ pub enum StoreAccountsCommand {
 }
 
 #[derive(Debug, Subcommand)]
-pub enum StoreNotesCommand {
+pub enum StoreNoteCommand {
+    /// Get note details by ID
+    Get {
+        /// Note id (0x-hex)
+        note_id: String,
+        /// Path to the sqlite3 store file
+        #[arg(long, value_name = "path")]
+        store: PathBuf,
+    },
     /// List notes from a local store
     List {
         /// Path to the sqlite3 store file
@@ -244,7 +238,7 @@ pub enum StoreNotesCommand {
 }
 
 #[derive(Debug, Subcommand)]
-pub enum StoreTagsCommand {
+pub enum StoreTagCommand {
     /// List tracked note tags from a local store
     List {
         /// Path to the sqlite3 store file
@@ -302,7 +296,7 @@ impl NoteTypeFilter {
 impl Cli {
     pub fn execute(self) -> Result<()> {
         match self.command {
-            Command::File {
+            Command::Inspect {
                 file_path,
                 validate,
                 network,
@@ -359,44 +353,43 @@ impl Cli {
             },
             Command::Store { command } => match command {
                 StoreCommand::Path => store::inspect::print_default_store_path(),
-                StoreCommand::Stats { store } => store::inspect::print_store_stats(store),
-                StoreCommand::Inspect { store } => store::inspect::inspect_store(store),
-                StoreCommand::Account {
-                    store,
-                    account,
-                    commitment,
-                    nonce,
-                } => {
-                    let query = match (account, commitment, nonce) {
-                        (Some(account), None, None) => {
-                            let (account_id, _) = parse::account_id(&account)?;
-                            store::account::StoreAccountQuery::AccountId(account_id)
-                        }
-                        (None, Some(commitment), None) => {
-                            store::account::StoreAccountQuery::Commitment(commitment)
-                        }
-                        (None, None, Some(nonce)) => {
-                            store::account::StoreAccountQuery::Nonce(nonce)
-                        }
-                        _ => {
-                            return Err(anyhow!(
-                                "provide exactly one of --account, --commitment, or --nonce"
-                            ));
-                        }
-                    };
-                    store::account::inspect_store_account(store, query)
-                }
-                StoreCommand::Accounts { command } => match command {
-                    StoreAccountsCommand::List { store } => {
+                StoreCommand::Info { store } => store::inspect::inspect_store(store),
+                StoreCommand::Account { command } => match command {
+                    StoreAccountCommand::Get {
+                        store,
+                        account,
+                        commitment,
+                        nonce,
+                    } => {
+                        let query = match (account, commitment, nonce) {
+                            (Some(account), None, None) => {
+                                let (account_id, _) = parse::account_id(&account)?;
+                                store::account::StoreAccountQuery::AccountId(account_id)
+                            }
+                            (None, Some(commitment), None) => {
+                                store::account::StoreAccountQuery::Commitment(commitment)
+                            }
+                            (None, None, Some(nonce)) => {
+                                store::account::StoreAccountQuery::Nonce(nonce)
+                            }
+                            _ => {
+                                return Err(anyhow!(
+                                    "provide exactly one of --account, --commitment, or --nonce"
+                                ));
+                            }
+                        };
+                        store::account::inspect_store_account(store, query)
+                    }
+                    StoreAccountCommand::List { store } => {
                         store::account::list_store_accounts(store)
                     }
                 },
-                StoreCommand::Note { store, note_id } => {
-                    let note_id = parse::note_id(&note_id)?;
-                    store::note::inspect_store_note(store, note_id)
-                }
-                StoreCommand::Notes { command } => match command {
-                    StoreNotesCommand::List {
+                StoreCommand::Note { command } => match command {
+                    StoreNoteCommand::Get { store, note_id } => {
+                        let note_id = parse::note_id(&note_id)?;
+                        store::note::inspect_store_note(store, note_id)
+                    }
+                    StoreNoteCommand::List {
                         store,
                         input,
                         output,
@@ -425,8 +418,8 @@ impl Cli {
                         store::note::list_store_notes(store, filters)
                     }
                 },
-                StoreCommand::Tags { command } => match command {
-                    StoreTagsCommand::List { store } => store::tags::list_store_tags(store),
+                StoreCommand::Tag { command } => match command {
+                    StoreTagCommand::List { store } => store::tags::list_store_tags(store),
                 },
                 StoreCommand::Tx { command } => match command {
                     StoreTxCommand::Inspect {
