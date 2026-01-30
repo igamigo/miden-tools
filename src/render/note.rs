@@ -124,7 +124,10 @@ fn decode_mint(inputs: &[Felt]) -> Vec<String> {
     // - Private mode: 8 inputs (recipient digest + note params)
     // - Public mode: 16+ inputs (full recipient details + note params + note inputs)
     if inputs.len() < 8 {
-        return vec![format!("raw inputs: {} (expected at least 8)", inputs.len())];
+        return vec![format!(
+            "raw inputs: {} (expected at least 8)",
+            inputs.len()
+        )];
     }
 
     let target_recipient = word_from_slice(inputs, 0).unwrap();

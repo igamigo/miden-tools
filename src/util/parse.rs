@@ -104,9 +104,8 @@ pub(crate) fn transaction_id(raw: &str) -> Result<TransactionId> {
 
 /// Parse a block number from decimal or 0x-hex.
 pub(crate) fn block_number(raw: &str) -> Result<BlockNumber> {
-    let value = u64(raw).with_context(|| {
-        "Block numbers can be decimal (e.g., 12345) or hex (e.g., 0x3039)"
-    })?;
+    let value = u64(raw)
+        .with_context(|| "Block numbers can be decimal (e.g., 12345) or hex (e.g., 0x3039)")?;
     let raw: u32 = value.try_into().map_err(|_| {
         anyhow!(
             "block number {} exceeds maximum ({})\n  hint: Block numbers are u32 values",

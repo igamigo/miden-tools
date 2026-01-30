@@ -9,9 +9,9 @@ use miden_client::{
     rpc::{Endpoint, GrpcClient, NodeRpcClient},
     utils::Deserializable,
 };
+use miden_crypto::merkle::SparseMerklePath;
 use miden_protocol::block::BlockNumber;
 use miden_protocol::note::NoteAttachmentContent;
-use miden_crypto::merkle::SparseMerklePath;
 use tokio::runtime::Runtime;
 
 use crate::render::note::{
@@ -44,10 +44,7 @@ pub(crate) fn inspect_note(
                         miden_client::rpc::domain::note::FetchedNote::Public(note, proof) => {
                             (NoteFile::NoteWithProof(note.clone(), proof.clone()), None)
                         }
-                        miden_client::rpc::domain::note::FetchedNote::Private(
-                            header,
-                            _proof,
-                        ) => (
+                        miden_client::rpc::domain::note::FetchedNote::Private(header, _proof) => (
                             NoteFile::NoteId(header.id().clone()),
                             Some("note is private; saved NoteId-only NoteFile"),
                         ),
@@ -174,7 +171,10 @@ fn render_note_attachment(attachment: &NoteAttachment) {
             println!("- attachment content: {}", word.to_hex());
         }
         NoteAttachmentContent::Array(array) => {
-            println!("- attachment content: array (commitment: {})", array.commitment().to_hex());
+            println!(
+                "- attachment content: array (commitment: {})",
+                array.commitment().to_hex()
+            );
         }
     }
 }

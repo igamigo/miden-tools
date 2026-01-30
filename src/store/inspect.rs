@@ -59,15 +59,12 @@ pub(crate) fn print_store_stats(path: PathBuf) -> Result<()> {
     println!("- accounts: {}", stats.distinct_account_ids);
     println!(
         "- notes: input {} output {} (unspent {})",
-        stats.input_notes_total,
-        stats.output_notes_total,
-        stats.output_unspent
+        stats.input_notes_total, stats.output_notes_total, stats.output_unspent
     );
     println!("- transactions: {}", stats.transactions_total);
     println!(
         "- blocks: {} (sync height {})",
-        block_count,
-        stats.sync_height
+        block_count, stats.sync_height
     );
     if let Some(max_block) = max_block {
         println!("- max block: {}", max_block);

@@ -138,7 +138,8 @@ pub(crate) fn list_store_notes(store_path: PathBuf, filters: NoteListFilters) ->
             .await
             .with_context(|| format!("failed to open store at {}", store_path.display()))?;
 
-        let include_input = filters.include_input || (!filters.include_input && !filters.include_output);
+        let include_input =
+            filters.include_input || (!filters.include_input && !filters.include_output);
         let include_output =
             filters.include_output || (!filters.include_input && !filters.include_output);
         let state_filters = normalize_state_filters(&filters.states);
@@ -200,7 +201,11 @@ fn matches_input_note(
     }
 
     if let Some(tag) = tag {
-        if note.metadata().map(|meta| meta.tag() != tag).unwrap_or(true) {
+        if note
+            .metadata()
+            .map(|meta| meta.tag() != tag)
+            .unwrap_or(true)
+        {
             return false;
         }
     }

@@ -67,10 +67,7 @@ pub(crate) fn rpc_block(endpoint: Endpoint, block_num: BlockNumber) -> Result<()
                 println!("- nullifier root: {}", header.nullifier_root());
                 println!("- note root: {}", header.note_root());
                 println!("- tx commitment: {}", header.tx_commitment());
-                println!(
-                    "- tx kernel commitment: {}",
-                    header.tx_kernel_commitment()
-                );
+                println!("- tx kernel commitment: {}", header.tx_kernel_commitment());
                 let fee_params = header.fee_parameters();
                 println!("- native asset faucet: {}", fee_params.native_asset_id());
                 println!(
@@ -79,7 +76,10 @@ pub(crate) fn rpc_block(endpoint: Endpoint, block_num: BlockNumber) -> Result<()
                 );
             }
             Err(err) => {
-                println!("RPC block {} ({endpoint}): error: {err}", block_num.as_u32());
+                println!(
+                    "RPC block {} ({endpoint}): error: {err}",
+                    block_num.as_u32()
+                );
             }
         }
         Ok(())

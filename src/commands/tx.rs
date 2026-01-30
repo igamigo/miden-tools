@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use anyhow::{Context, Result};
 use miden_client::note::{NoteId, Nullifier};
-use miden_client::store::{InputNoteRecord, NoteFilter, OutputNoteRecord, Store, TransactionFilter};
+use miden_client::store::{
+    InputNoteRecord, NoteFilter, OutputNoteRecord, Store, TransactionFilter,
+};
 use miden_client::transaction::{OutputNote, TransactionRecord};
 use miden_client_sqlite_store::SqliteStore;
 use tokio::runtime::Runtime;
@@ -172,11 +174,7 @@ async fn load_transaction_notes(
         .map(|nullifier| (*nullifier, input_by_nullifier.remove(nullifier)))
         .collect();
 
-    let output_note_ids: Vec<NoteId> = details
-        .output_notes
-        .iter()
-        .map(|note| note.id())
-        .collect();
+    let output_note_ids: Vec<NoteId> = details.output_notes.iter().map(|note| note.id()).collect();
     let output_notes = if output_note_ids.is_empty() {
         Vec::new()
     } else {
