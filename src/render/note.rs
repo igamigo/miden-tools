@@ -1,9 +1,10 @@
 use miden_client::{
-    BlockNumber, Felt, Word,
+    Felt, Word,
     account::AccountId,
     asset::Asset,
     note::{NoteAssets, NoteExecutionHint, NoteTag, NoteType, WellKnownNote},
 };
+use miden_protocol::block::BlockNumber;
 
 use super::asset::format_asset;
 
@@ -20,19 +21,7 @@ pub(crate) fn well_known_label_from_root(script_root: &Word) -> Option<&'static 
 
 pub(crate) fn format_note_tag(tag: NoteTag) -> String {
     let raw: u32 = tag.into();
-    let execution = tag.execution_mode();
-    let target = if tag.is_single_target() {
-        "single-target"
-    } else {
-        "use-case"
-    };
-    let note_types = if tag.validate(NoteType::Private).is_ok() {
-        "any note type"
-    } else {
-        "public only"
-    };
-
-    format!("0x{raw:08x} (mode: {execution:?}, target: {target}, {note_types})")
+    format!("0x{raw:08x}")
 }
 
 pub(crate) fn render_assets(assets: &NoteAssets) {
@@ -104,8 +93,8 @@ fn decode_p2ide(inputs: &[Felt]) -> Vec<String> {
 }
 
 fn decode_swap(inputs: &[Felt]) -> Vec<String> {
-    if inputs.len() < 12 {
-        return vec![format!("raw inputs: {} (expected 12)", inputs.len())];
+    if inputs.len() < 16 {
+        return vec![format!("raw inputs: {} (expected 16)", inputs.len())];
     }
     let requested_asset = format_asset_from_word(word_from_slice(inputs, 0).unwrap());
     let payback_recipient = word_from_slice(inputs, 4).unwrap();
@@ -113,6 +102,10 @@ fn decode_swap(inputs: &[Felt]) -> Vec<String> {
     let note_type = format_note_type(inputs[9]);
     let note_aux = format_felt(inputs[10]);
     let note_tag = format_note_tag(NoteTag::from(inputs[11].as_int() as u32));
+    let payback_attachment_scheme = format_felt(inputs[12]);
+    let payback_attachment_content = word_from_slice(inputs, 13)
+        .map(|w| w.to_hex())
+        .unwrap_or_else(|| "invalid".to_string());
 
     vec![
         format!("requested asset: {requested_asset}"),
@@ -121,28 +114,60 @@ fn decode_swap(inputs: &[Felt]) -> Vec<String> {
         format!("payback note type: {note_type}"),
         format!("payback note aux: {note_aux}"),
         format!("payback note tag: {note_tag}"),
+        format!("payback attachment scheme: {payback_attachment_scheme}"),
+        format!("payback attachment content: {payback_attachment_content}"),
     ]
 }
 
 fn decode_mint(inputs: &[Felt]) -> Vec<String> {
-    if inputs.len() < 9 {
-        return vec![format!("raw inputs: {} (expected 9)", inputs.len())];
+    // MINT notes have different input formats:
+    // - Private mode: 8 inputs (recipient digest + note params)
+    // - Public mode: 16+ inputs (full recipient details + note params + note inputs)
+    if inputs.len() < 8 {
+        return vec![format!("raw inputs: {} (expected at least 8)", inputs.len())];
     }
+
     let target_recipient = word_from_slice(inputs, 0).unwrap();
     let execution_hint = format_execution_hint(inputs[4]);
     let note_type = format_note_type(inputs[5]);
     let note_aux = format_felt(inputs[6]);
     let note_tag = format_note_tag(NoteTag::from(inputs[7].as_int() as u32));
-    let amount = format_felt(inputs[8]);
 
-    vec![
+    let mut result = vec![
         format!("target recipient: {}", target_recipient.to_hex()),
         format!("output note execution hint: {execution_hint}"),
         format!("output note type: {note_type}"),
         format!("output note aux: {note_aux}"),
         format!("output note tag: {note_tag}"),
-        format!("amount: {amount}"),
-    ]
+    ];
+
+    // Check for extended public mode inputs (16+ inputs)
+    if inputs.len() >= 16 {
+        result.insert(0, "mode: public (extended inputs)".to_string());
+        let attachment_scheme = format_felt(inputs[8]);
+        let attachment_content = word_from_slice(inputs, 9)
+            .map(|w| w.to_hex())
+            .unwrap_or_else(|| "invalid".to_string());
+        let amount = format_felt(inputs[13]);
+        let script_root = word_from_slice(inputs, 14)
+            .map(|w| w.to_hex())
+            .unwrap_or_else(|| "invalid".to_string());
+
+        result.push(format!("output attachment scheme: {attachment_scheme}"));
+        result.push(format!("output attachment content: {attachment_content}"));
+        result.push(format!("amount: {amount}"));
+        result.push(format!("output script root: {script_root}"));
+
+        // Variable-length note inputs start at index 18
+        if inputs.len() > 18 {
+            let note_inputs_count = inputs.len() - 18;
+            result.push(format!("output note inputs count: {note_inputs_count}"));
+        }
+    } else {
+        result.insert(0, "mode: private (recipient digest)".to_string());
+    }
+
+    result
 }
 
 fn decode_burn(inputs: &[Felt]) -> Vec<String> {

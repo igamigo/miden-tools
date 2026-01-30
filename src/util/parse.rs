@@ -2,13 +2,14 @@
 
 use anyhow::{Context, Result, anyhow};
 use miden_client::{
-    BlockNumber, Felt, Word,
+    Felt, Word,
     account::AccountId,
     address::{Address, AddressId, NetworkId},
     note::NoteId,
     rpc::Endpoint,
     transaction::TransactionId,
 };
+use miden_protocol::block::BlockNumber;
 
 /// Parse a user-provided account identifier from hex or bech32.
 pub(crate) fn account_id(raw: &str) -> Result<(AccountId, Option<NetworkId>)> {
@@ -98,7 +99,7 @@ pub(crate) fn transaction_id(raw: &str) -> Result<TransactionId> {
         };
         anyhow!("invalid transaction id: {err}\n  hint: {hint}")
     })?;
-    Ok(TransactionId::from(word))
+    Ok(TransactionId::from_raw(word))
 }
 
 /// Parse a block number from decimal or 0x-hex.

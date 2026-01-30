@@ -152,8 +152,7 @@ async fn load_transaction_notes(
     let input_nullifiers: Vec<Nullifier> = details
         .input_note_nullifiers
         .iter()
-        .copied()
-        .map(Nullifier::from)
+        .map(|word| Nullifier::from_raw(*word))
         .collect();
     let input_notes = if input_nullifiers.is_empty() {
         Vec::new()

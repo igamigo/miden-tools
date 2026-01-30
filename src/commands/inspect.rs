@@ -2,13 +2,15 @@ use std::{collections::BTreeSet, fs, path::PathBuf};
 
 use anyhow::{Context, Result, anyhow};
 use miden_client::{
-    BlockNumber, Word,
+    Word,
     account::AccountFile,
-    note::{NoteHeader, NoteId, NoteInclusionProof, Nullifier},
+    note::{NoteAttachment, NoteHeader, NoteId, NoteInclusionProof, Nullifier},
     notes::NoteFile,
     rpc::{Endpoint, GrpcClient, NodeRpcClient},
     utils::Deserializable,
 };
+use miden_protocol::block::BlockNumber;
+use miden_protocol::note::NoteAttachmentContent;
 use miden_crypto::merkle::SparseMerklePath;
 use tokio::runtime::Runtime;
 
@@ -43,11 +45,10 @@ pub(crate) fn inspect_note(
                             (NoteFile::NoteWithProof(note.clone(), proof.clone()), None)
                         }
                         miden_client::rpc::domain::note::FetchedNote::Private(
-                            id,
-                            _metadata,
+                            header,
                             _proof,
                         ) => (
-                            NoteFile::NoteId(*id),
+                            NoteFile::NoteId(header.id().clone()),
                             Some("note is private; saved NoteId-only NoteFile"),
                         ),
                     };
@@ -147,11 +148,33 @@ fn render_note_file(note_file: &NoteFile) {
             println!("- sender: {}", metadata.sender());
             println!("- type: {:?}", metadata.note_type());
             println!("- tag: {}", format_note_tag(metadata.tag()));
+            render_note_attachment(metadata.attachment());
             render_assets(note.assets());
             println!("- script root: {script_label}");
             println!("- created in block: {}", location.block_num().as_u32());
             println!("- node index in block: {}", location.node_index_in_block());
             render_well_known_inputs(&script_root, note.inputs().values(), "- ", "  ");
+        }
+    }
+}
+
+fn render_note_attachment(attachment: &NoteAttachment) {
+    let scheme = attachment.attachment_scheme();
+    let kind = attachment.attachment_kind();
+
+    // Only display if there's an actual attachment
+    if kind.is_none() {
+        return;
+    }
+
+    println!("- attachment scheme: {}", scheme.as_u32());
+    match attachment.content() {
+        NoteAttachmentContent::None => {}
+        NoteAttachmentContent::Word(word) => {
+            println!("- attachment content: {}", word.to_hex());
+        }
+        NoteAttachmentContent::Array(array) => {
+            println!("- attachment content: array (commitment: {})", array.commitment().to_hex());
         }
     }
 }
@@ -271,19 +294,26 @@ async fn validate_note(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
     }
 
     if let Some(nullifier) = local_nullifier {
+        let mut nullifiers = std::collections::BTreeSet::new();
+        nullifiers.insert(nullifier);
         match rpc
-            .get_nullifier_commit_height(&nullifier, BlockNumber::GENESIS)
+            .get_nullifier_commit_heights(nullifiers, BlockNumber::GENESIS)
             .await
         {
-            Ok(Some(height)) => println!(
-                "- nullifier {} is spent (committed at block {})",
-                nullifier,
-                height.as_u32()
-            ),
-            Ok(None) => println!(
-                "- nullifier {} not found (unspent or not yet known)",
-                nullifier
-            ),
+            Ok(heights) => {
+                if let Some(height) = heights.get(&nullifier).copied().flatten() {
+                    println!(
+                        "- nullifier {} is spent (committed at block {})",
+                        nullifier,
+                        height.as_u32()
+                    );
+                } else {
+                    println!(
+                        "- nullifier {} not found (unspent or not yet known)",
+                        nullifier
+                    );
+                }
+            }
             Err(err) => println!("- failed to check nullifier {}: {err}", nullifier),
         }
     } else {

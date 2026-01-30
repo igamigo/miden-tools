@@ -10,8 +10,8 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"] }
-miden-client = { version = "0.12.5", features = ["tonic"] }
-miden-client-sqlite-store = { version = "0.12.5"}
+miden-client = { version = "0.13", features = ["tonic"] }
+miden-client-sqlite-store = { version = "0.13" }
 tokio = { version = "1.48", features = ["rt-multi-thread"] }
 rusqlite = { version = "0.36", features = ["bundled"] }
 ratatui = { version = "0.27", optional = true }
@@ -19,7 +19,8 @@ crossterm = { version = "0.27", optional = true }
 dirs = "6"
 
 # TODO: remove this. It was needed for SparseMerklePath but it should be re-exported from client
-miden-crypto = "0.18.4"
+miden-crypto = "0.19"
+miden-protocol = "0.13"
 
 [features]
 tui = ["ratatui", "crossterm"]

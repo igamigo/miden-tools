@@ -8,7 +8,7 @@ use miden_client::note::{NoteTag, NoteType};
 #[cfg(feature = "tui")]
 use crate::store::tui as store_tui;
 use crate::{
-    commands::{account, block, inspect, rpc, tx, word},
+    commands::{account, inspect, rpc, tx, word},
     store,
     util::{net, parse},
 };
@@ -27,7 +27,7 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// Inspect a note or account file and print a short summary
-    File {
+    Inspect {
         /// Path to a serialized `NoteFile` or `AccountFile`
         file_path: PathBuf,
         /// Validate the note against a node (fetch inclusion info, nullifier status)
@@ -44,11 +44,6 @@ pub enum Command {
     Rpc {
         #[command(subcommand)]
         command: RpcCommand,
-    },
-    /// Block-related commands
-    Block {
-        #[command(subcommand)]
-        command: BlockCommand,
     },
     /// Store-related commands
     Store {
@@ -105,24 +100,6 @@ pub enum RpcCommand {
         /// Print extended account details
         #[arg(long, default_value_t = false)]
         verbose: bool,
-        /// Network to query
-        #[arg(long, value_enum, default_value = "testnet")]
-        network: Network,
-        /// Custom endpoint (protocol://host[:port]) when --network custom
-        #[arg(long)]
-        endpoint: Option<String>,
-    },
-}
-
-#[derive(Debug, Subcommand)]
-pub enum BlockCommand {
-    /// Import a block header into a local store
-    Import {
-        /// Block number (decimal or 0x-hex)
-        block_num: String,
-        /// Path to the sqlite3 store file
-        #[arg(long, value_name = "path")]
-        store: PathBuf,
         /// Network to query
         #[arg(long, value_enum, default_value = "testnet")]
         network: Network,
@@ -380,18 +357,6 @@ impl Cli {
                     )
                 }
             },
-            Command::Block { command } => match command {
-                BlockCommand::Import {
-                    block_num,
-                    store,
-                    network,
-                    endpoint,
-                } => {
-                    let block_num = parse::block_number(&block_num)?;
-                    let endpoint = net::resolve_endpoint(network, endpoint)?;
-                    block::import_block(store, block_num, endpoint)
-                }
-            },
             Command::Store { command } => match command {
                 StoreCommand::Path => store::inspect::print_default_store_path(),
                 StoreCommand::Stats { store } => store::inspect::print_store_stats(store),
@@ -542,6 +507,7 @@ impl Cli {
                     if let Ok((network_id, decoded_address)) = Address::decode(&address) {
                         let account_id = match decoded_address.id() {
                             AddressId::AccountId(id) => id,
+                            _ => return Err(anyhow!("unsupported address type")),
                         };
 
                         println!("Address: {}", address);
@@ -557,12 +523,13 @@ impl Cli {
                         if let Some(interface) = decoded_address.interface() {
                             println!("- interface: {}", interface);
                         }
-                        println!("- bech32: {}", decoded_address.encode(network_id));
+                        println!("- bech32: {}", decoded_address.encode(network_id.clone()));
 
                         if let Some(expected) = selected_network_id {
                             if expected != network_id {
                                 println!(
-                                    "- warning: address network {network_id} does not match selected {expected}"
+                                    "- warning: address network {} does not match selected {}",
+                                    network_id, expected
                                 );
                             }
                         }
@@ -572,7 +539,14 @@ impl Cli {
                         let (account_id, network_hint) = parse::account_id(&address)?;
                         let addr = Address::new(account_id);
 
-                        println!("Address (from account id):");
+                        if let Some(network_id) = selected_network_id {
+                            let encoded = addr.encode(network_id.clone());
+                            println!("Address: {}", encoded);
+                            println!("- network: {}", network_id);
+                        } else {
+                            println!("Address (from account id):");
+                            println!("- bech32: n/a (provide --network testnet|devnet)");
+                        }
                         println!("- account id: {}", account_id);
                         println!("- account type: {:?}", account_id.account_type());
                         println!("- storage mode: {}", account_id.storage_mode());
@@ -581,12 +555,6 @@ impl Cli {
                             "- note tag: {}",
                             crate::render::note::format_note_tag(addr.to_note_tag())
                         );
-
-                        if let Some(network_id) = selected_network_id {
-                            println!("- bech32 ({network_id}): {}", addr.encode(network_id));
-                        } else {
-                            println!("- bech32: n/a (provide --network testnet|devnet)");
-                        }
 
                         if let Some(network_id) = network_hint {
                             println!("- address network: {}", network_id);
