@@ -30,6 +30,10 @@ distaff inspect <path-to-note-or-account-file>
 distaff inspect <path> --validate --network testnet
 ```
 
+| Flag | Description |
+|------|-------------|
+| `--validate` | Validate the note against a node (checks inclusion proof and nullifier status) |
+
 ### RPC Commands
 
 Query Miden nodes directly:
@@ -40,6 +44,11 @@ distaff rpc block <block-num> --network testnet
 distaff rpc note <note-id> --network testnet
 distaff rpc account <address-or-account-id> --verbose
 ```
+
+| Flag | Description |
+|------|-------------|
+| `--verbose` | Show detailed output (e.g., full account vault contents) |
+| `--save <path>` | Save fetched note to a file (for `rpc note` command) |
 
 ### Store Commands
 
@@ -58,7 +67,10 @@ distaff store tx inspect <tx-id> --verbose            # Inspect transaction
 distaff store tui                                     # Interactive store browser
 ```
 
-Use `--store <path>` to specify a custom store path.
+| Flag | Description |
+|------|-------------|
+| `--store <path>` | Use a custom store path instead of the default |
+| `--verbose` | Show detailed transaction info (for `tx inspect`) |
 
 ### Parsing Helpers
 
@@ -87,6 +99,10 @@ make clippy     # Lint with warnings denied
 make test       # Run tests
 make install    # Install locally
 ```
+
+## Contributing
+
+For contributing to the underlying `miden-client` library, see the [miden-client contributing guide](https://github.com/0xPolygonMiden/miden-client/blob/main/CONTRIBUTING.md).
 
 ## Notes
 

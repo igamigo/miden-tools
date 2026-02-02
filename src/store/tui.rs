@@ -235,12 +235,11 @@ impl StoreTui {
         loop {
             terminal.draw(|frame| self.render(frame))?;
 
-            if event::poll(Duration::from_millis(200))? {
-                if let Event::Key(key) = event::read()? {
-                    if self.handle_key(key)? {
-                        break;
-                    }
-                }
+            if event::poll(Duration::from_millis(200))?
+                && let Event::Key(key) = event::read()?
+                && self.handle_key(key)?
+            {
+                break;
             }
         }
         Ok(())
@@ -354,42 +353,36 @@ impl StoreTui {
     }
 
     fn navigate_to_transaction(&mut self) {
-        match self.current_tab() {
-            Tab::InputNotes => {
-                // Try to find transaction that consumed this note
-                let Some(idx) = self.current_index() else {
-                    return;
-                };
-                let note = &self.input_notes[idx];
-                // Check if we can get consumer transaction from state
-                if let Some(tx_id) = self.get_input_note_consumer_tx(note) {
-                    self.jump_to_transaction_by_id(&tx_id);
-                }
+        if self.current_tab() == Tab::InputNotes {
+            // Try to find transaction that consumed this note
+            let Some(idx) = self.current_index() else {
+                return;
+            };
+            let note = &self.input_notes[idx];
+            // Check if we can get consumer transaction from state
+            if let Some(tx_id) = self.get_input_note_consumer_tx(note) {
+                self.jump_to_transaction_by_id(&tx_id);
             }
-            _ => {}
         }
     }
 
     fn navigate_to_note(&mut self) {
-        match self.current_tab() {
-            Tab::Transactions => {
-                // Navigate to first input note of this transaction
-                let Some(idx) = self.current_index() else {
-                    return;
-                };
-                let tx = &self.transactions[idx];
-                if let Some(nullifier_word) = tx.details.input_note_nullifiers.first() {
-                    // Find input note with this nullifier
-                    let target_nullifier = miden_client::note::Nullifier::from_raw(*nullifier_word);
-                    for (i, note) in self.input_notes.iter().enumerate() {
-                        if note.nullifier() == target_nullifier {
-                            self.jump_to_input_note(i);
-                            return;
-                        }
+        if self.current_tab() == Tab::Transactions {
+            // Navigate to first input note of this transaction
+            let Some(idx) = self.current_index() else {
+                return;
+            };
+            let tx = &self.transactions[idx];
+            if let Some(nullifier_word) = tx.details.input_note_nullifiers.first() {
+                // Find input note with this nullifier
+                let target_nullifier = miden_client::note::Nullifier::from_raw(*nullifier_word);
+                for (i, note) in self.input_notes.iter().enumerate() {
+                    if note.nullifier() == target_nullifier {
+                        self.jump_to_input_note(i);
+                        return;
                     }
                 }
             }
-            _ => {}
         }
     }
 
@@ -525,10 +518,10 @@ impl StoreTui {
         } else {
             self.tab -= 1;
         }
-        if self.current_tab() == Tab::OutputNotes {
-            if let Err(err) = self.ensure_output_notes_loaded() {
-                self.status = format!("output notes load failed: {err}");
-            }
+        if self.current_tab() == Tab::OutputNotes
+            && let Err(err) = self.ensure_output_notes_loaded()
+        {
+            self.status = format!("output notes load failed: {err}");
         }
         self.rebuild_visible(self.tab);
         self.detail_scroll = 0;
@@ -536,10 +529,10 @@ impl StoreTui {
 
     fn next_tab(&mut self) {
         self.tab = (self.tab + 1) % Tab::all().len();
-        if self.current_tab() == Tab::OutputNotes {
-            if let Err(err) = self.ensure_output_notes_loaded() {
-                self.status = format!("output notes load failed: {err}");
-            }
+        if self.current_tab() == Tab::OutputNotes
+            && let Err(err) = self.ensure_output_notes_loaded()
+        {
+            self.status = format!("output notes load failed: {err}");
         }
         self.rebuild_visible(self.tab);
         self.detail_scroll = 0;

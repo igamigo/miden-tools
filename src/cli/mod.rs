@@ -277,7 +277,7 @@ pub enum NoteTypeFilter {
 }
 
 impl NoteTypeFilter {
-    pub(crate) fn to_note_type(self) -> NoteType {
+    pub(crate) fn into_note_type(self) -> NoteType {
         match self {
             NoteTypeFilter::Public => NoteType::Public,
             NoteTypeFilter::Private => NoteType::Private,

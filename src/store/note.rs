@@ -138,10 +138,8 @@ pub(crate) fn list_store_notes(store_path: PathBuf, filters: NoteListFilters) ->
             .await
             .with_context(|| format!("failed to open store at {}", store_path.display()))?;
 
-        let include_input =
-            filters.include_input || (!filters.include_input && !filters.include_output);
-        let include_output =
-            filters.include_output || (!filters.include_input && !filters.include_output);
+        let include_input = filters.include_input || !filters.include_output;
+        let include_output = filters.include_output || !filters.include_input;
         let state_filters = normalize_state_filters(&filters.states);
 
         let mut lines = Vec::new();
@@ -200,24 +198,22 @@ fn matches_input_note(
         return false;
     }
 
-    if let Some(tag) = tag {
-        if note
+    if let Some(tag) = tag
+        && note
             .metadata()
             .map(|meta| meta.tag() != tag)
             .unwrap_or(true)
-        {
-            return false;
-        }
+    {
+        return false;
     }
 
-    if let Some(note_type) = note_type {
-        if note
+    if let Some(note_type) = note_type
+        && note
             .metadata()
             .map(|meta| meta.note_type() != note_type)
             .unwrap_or(true)
-        {
-            return false;
-        }
+    {
+        return false;
     }
 
     true
@@ -234,16 +230,16 @@ fn matches_output_note(
         return false;
     }
 
-    if let Some(tag) = tag {
-        if note.metadata().tag() != tag {
-            return false;
-        }
+    if let Some(tag) = tag
+        && note.metadata().tag() != tag
+    {
+        return false;
     }
 
-    if let Some(note_type) = note_type {
-        if note.metadata().note_type() != note_type {
-            return false;
-        }
+    if let Some(note_type) = note_type
+        && note.metadata().note_type() != note_type
+    {
+        return false;
     }
 
     true

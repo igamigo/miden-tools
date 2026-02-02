@@ -10,6 +10,8 @@ use miden_client_sqlite_store::SqliteStore;
 use rusqlite::Connection;
 use tokio::runtime::Runtime;
 
+type NoteStateCounts = Vec<(&'static str, u64)>;
+
 /// Print the default store path for this platform.
 pub(crate) fn print_default_store_path() -> Result<()> {
     let base = dirs::data_local_dir()
@@ -273,7 +275,7 @@ async fn collect_store_stats(store: &SqliteStore) -> Result<StoreStats> {
 fn count_note_states(
     input_notes: &[InputNoteRecord],
     output_notes: &[OutputNoteRecord],
-) -> (Vec<(&'static str, u64)>, Vec<(&'static str, u64)>) {
+) -> (NoteStateCounts, NoteStateCounts) {
     let mut input_counts = [0u64; 9];
     for note in input_notes {
         let idx = match note.state() {
@@ -321,14 +323,8 @@ fn count_note_states(
         "consumed",
     ];
 
-    let input_states = input_labels
-        .into_iter()
-        .zip(input_counts.into_iter())
-        .collect();
-    let output_states = output_labels
-        .into_iter()
-        .zip(output_counts.into_iter())
-        .collect();
+    let input_states = input_labels.into_iter().zip(input_counts).collect();
+    let output_states = output_labels.into_iter().zip(output_counts).collect();
 
     (input_states, output_states)
 }
@@ -347,7 +343,7 @@ fn count_transaction_states(
     }
 
     let labels = ["pending", "committed", "discarded"];
-    labels.into_iter().zip(counts.into_iter()).collect()
+    labels.into_iter().zip(counts).collect()
 }
 
 fn newline() {

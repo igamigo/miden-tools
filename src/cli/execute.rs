@@ -143,7 +143,7 @@ fn execute_store(command: StoreCommand) -> Result<()> {
                     }
                     None => None,
                 };
-                let note_type = note_type.map(NoteTypeFilter::to_note_type);
+                let note_type = note_type.map(NoteTypeFilter::into_note_type);
                 let filters = store::note::NoteListFilters {
                     include_input: input,
                     include_output: output,
@@ -210,12 +210,12 @@ fn execute_parse(command: ParseCommand) -> Result<()> {
             println!("- account ID version: {:?}", account_id.version());
 
             if let Some((address_network, address)) = decoded_address {
-                if let Some(expected) = selected_network_id.clone() {
-                    if expected != address_network {
-                        println!(
-                            "- warning: address network {address_network} does not match selected {expected}"
-                        );
-                    }
+                if let Some(expected) = selected_network_id.clone()
+                    && expected != address_network
+                {
+                    println!(
+                        "- warning: address network {address_network} does not match selected {expected}"
+                    );
                 }
                 println!("- address: {}", address.encode(address_network));
             } else if let Some(network_id) = selected_network_id {
@@ -266,13 +266,13 @@ fn execute_parse(command: ParseCommand) -> Result<()> {
                 }
                 println!("- bech32: {}", decoded_address.encode(network_id.clone()));
 
-                if let Some(expected) = selected_network_id {
-                    if expected != network_id {
-                        println!(
-                            "- warning: address network {} does not match selected {}",
-                            network_id, expected
-                        );
-                    }
+                if let Some(expected) = selected_network_id
+                    && expected != network_id
+                {
+                    println!(
+                        "- warning: address network {} does not match selected {}",
+                        network_id, expected
+                    );
                 }
 
                 Ok(())

@@ -45,7 +45,7 @@ pub(crate) fn inspect_note(
                             (NoteFile::NoteWithProof(note.clone(), proof.clone()), None)
                         }
                         miden_client::rpc::domain::note::FetchedNote::Private(header, _proof) => (
-                            NoteFile::NoteId(header.id().clone()),
+                            NoteFile::NoteId(header.id()),
                             Some("note is private; saved NoteId-only NoteFile"),
                         ),
                     };
@@ -230,10 +230,8 @@ async fn validate_note(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
                             if let Some(committed) =
                                 info.notes.iter().find(|note| note.note_id() == &note_id)
                             {
-                                let header = NoteHeader::new(
-                                    committed.note_id().clone(),
-                                    committed.metadata(),
-                                );
+                                let header =
+                                    NoteHeader::new(*committed.note_id(), committed.metadata());
                                 verify_inclusion_with_root(
                                     header.commitment(),
                                     committed.note_index(),
@@ -274,8 +272,7 @@ async fn validate_note(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
                         println!("- note {note_id} not found on node");
                     } else {
                         for fetched in notes {
-                            let header =
-                                NoteHeader::new(fetched.id().clone(), fetched.metadata().clone());
+                            let header = NoteHeader::new(fetched.id(), fetched.metadata().clone());
                             verify_inclusion_with_header(
                                 &rpc,
                                 header.commitment(),
@@ -369,8 +366,7 @@ fn verify_inclusion_with_root(
     root: Word,
     label: &str,
 ) -> Result<()> {
-    let note_value: Word = note_commitment.into();
-    let result = path.verify(note_index as u64, note_value, &root);
+    let result = path.verify(note_index as u64, note_commitment, &root);
     match result {
         Ok(()) => println!("- {label} inclusion proof: ok (index {note_index})"),
         Err(err) => println!("- {label} inclusion proof: failed (index {note_index}): {err}"),
