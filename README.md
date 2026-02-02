@@ -27,28 +27,96 @@ Inspect serialized note or account files:
 
 ```bash
 distaff inspect <path-to-note-or-account-file>
-distaff inspect <path> --validate --network testnet
+distaff inspect <path> --validate --network devnet
 ```
 
 | Flag | Description |
 |------|-------------|
-| `--validate` | Validate the note against a node (checks inclusion proof and nullifier status) |
+| `--validate` | Validate against a node. For notes: checks inclusion proof and nullifier status. For accounts: checks on-chain existence, state comparison, and staleness detection. |
+
+#### Example: Inspect a Note File with Validation
+
+```bash
+# First, fetch and save a note from devnet
+distaff rpc note 0x0e18ee4177e7c6b32d19e9a81200cb86a7afd50828a1c5384ffd2b8fc41e167e --network devnet --save note.mno
+
+# Then inspect with validation
+distaff inspect note.mno --validate --network devnet
+```
+
+Output:
+```
+Inspecting note.mno as NoteFile
+- variant: NoteWithProof
+- note id: 0x0e18ee4177e7c6b32d19e9a81200cb86a7afd50828a1c5384ffd2b8fc41e167e
+- sender: 0x8b043136e8426720729a83b33f95a6
+- type: Public
+- tag: 0x3e800000
+- assets: 1
+- asset details:
+  [0] fungible amount=1000000 faucet=0x8b043136e8426720729a83b33f95a6
+- script root: 0xa657a127211172b9b305d06c6e076dd1edbf67c8b1a32c063647d5f7bf456131 (P2ID)
+- created in block: 273675
+- node index in block: 0
+- inputs (P2ID):
+  target account: 0xfa0000000000bb800000cc000000de
+
+Validation (network: https://rpc.devnet.miden.io):
+- validation path: local inclusion proof (block header check)
+- local inclusion proof: ok (index 0)
+- nullifier 0xa2d4a93f342f2d215ef16fb24e4696d06ac250abfb8c13e2e607523ca2188575 not found (unspent or not yet known)
+```
 
 ### RPC Commands
 
 Query Miden nodes directly:
 
 ```bash
-distaff rpc status --network testnet
-distaff rpc block <block-num> --network testnet
-distaff rpc note <note-id> --network testnet
-distaff rpc account <address-or-account-id> --verbose
+distaff rpc status --network devnet
+distaff rpc block <block-num> --network devnet
+distaff rpc note <note-id> --network devnet
+distaff rpc account <address-or-account-id> --verbose --network devnet
 ```
 
 | Flag | Description |
 |------|-------------|
 | `--verbose` | Show detailed output (e.g., full account vault contents) |
 | `--save <path>` | Save fetched note to a file (for `rpc note` command) |
+
+#### Devnet Examples
+
+```bash
+# Check devnet status and latest block
+distaff rpc status --network devnet
+
+# Query the native asset faucet account
+distaff rpc account 0xd0da1f806b49552007c49c95d519d7 --network devnet
+
+# Get block details
+distaff rpc block 273518 --network devnet
+
+# Fetch a note by ID
+distaff rpc note 0x0e18ee4177e7c6b32d19e9a81200cb86a7afd50828a1c5384ffd2b8fc41e167e --network devnet
+
+# Fetch and save a note to a file
+distaff rpc note 0x0e18ee4177e7c6b32d19e9a81200cb86a7afd50828a1c5384ffd2b8fc41e167e --network devnet --save note.mno
+```
+
+Example output for note query:
+```
+Note 0x0e18ee4177e7c6b32d19e9a81200cb86a7afd50828a1c5384ffd2b8fc41e167e:
+- sender: 0x8b043136e8426720729a83b33f95a6
+- type: Public
+- tag: 0x3e800000
+- included in block: 273675
+- node index in block: 0
+- assets: 1
+- asset details:
+  [0] fungible amount=1000000 faucet=0x8b043136e8426720729a83b33f95a6
+- script root: 0xa657a127211172b9b305d06c6e076dd1edbf67c8b1a32c063647d5f7bf456131 (P2ID)
+- inputs (P2ID):
+  target account: 0xfa0000000000bb800000cc000000de
+```
 
 ### Store Commands
 

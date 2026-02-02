@@ -3,7 +3,7 @@ use std::{collections::BTreeSet, fs, path::PathBuf};
 use anyhow::{Context, Result, anyhow};
 use miden_client::{
     Word,
-    account::AccountFile,
+    account::{AccountFile, AccountHeader},
     note::{NoteAttachment, NoteHeader, NoteId, NoteInclusionProof, Nullifier},
     notes::NoteFile,
     rpc::{Endpoint, GrpcClient, NodeRpcClient},
@@ -88,8 +88,8 @@ pub(crate) fn inspect(file_path: PathBuf, endpoint: Option<Endpoint>) -> Result<
         Ok(account_file) => {
             println!("Inspecting {} as AccountFile", file_path.display());
             render_account_file(&account_file);
-            if endpoint.is_some() {
-                println!("- validation skipped for account files");
+            if let Some(endpoint) = endpoint {
+                run_account_validation(&account_file, endpoint)?;
             }
             Ok(())
         }
@@ -198,6 +198,122 @@ fn render_account_file(account_file: &AccountFile) {
 fn run_note_validation(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
     let rt = Runtime::new()?;
     rt.block_on(validate_note(note_file, endpoint))
+}
+
+fn run_account_validation(account_file: &AccountFile, endpoint: Endpoint) -> Result<()> {
+    let rt = Runtime::new()?;
+    rt.block_on(validate_account(account_file, endpoint))
+}
+
+async fn validate_account(account_file: &AccountFile, endpoint: Endpoint) -> Result<()> {
+    let account = &account_file.account;
+    let account_id = account.id();
+    let local_header = AccountHeader::from(account);
+
+    let rpc = GrpcClient::new(&endpoint, DEFAULT_TIMEOUT_MS);
+
+    println!();
+    println!("Validation (network: {}):", endpoint);
+
+    match rpc.get_account_details(account_id).await {
+        Ok(fetched) => {
+            let on_chain_commitment = fetched.commitment();
+            let local_commitment = local_header.commitment();
+
+            match fetched {
+                miden_client::rpc::domain::account::FetchedAccount::Public(
+                    on_chain_account,
+                    summary,
+                ) => {
+                    println!(
+                        "- account exists: yes (last block: {})",
+                        summary.last_block_num
+                    );
+
+                    let on_chain_header = AccountHeader::from(on_chain_account.as_ref());
+
+                    // Overall commitment comparison
+                    if local_commitment == on_chain_commitment {
+                        println!("- commitment: match");
+                    } else {
+                        println!("- commitment: mismatch");
+                        println!("    local:    {}", local_commitment);
+                        println!("    on-chain: {}", on_chain_commitment);
+                    }
+
+                    // Nonce comparison (staleness detection)
+                    let local_nonce = local_header.nonce();
+                    let on_chain_nonce = on_chain_header.nonce();
+                    let local_nonce_val = local_nonce.inner();
+                    let on_chain_nonce_val = on_chain_nonce.inner();
+                    if local_nonce_val == on_chain_nonce_val {
+                        println!("- nonce: {} (in sync)", local_nonce);
+                    } else if on_chain_nonce_val > local_nonce_val {
+                        let diff = on_chain_nonce_val - local_nonce_val;
+                        println!(
+                            "- nonce: local={}, on-chain={} (stale by {})",
+                            local_nonce, on_chain_nonce, diff
+                        );
+                    } else {
+                        println!(
+                            "- nonce: local={}, on-chain={} (local has uncommitted state)",
+                            local_nonce, on_chain_nonce
+                        );
+                    }
+
+                    // Vault commitment
+                    let local_vault = local_header.vault_root();
+                    let on_chain_vault = on_chain_header.vault_root();
+                    if local_vault == on_chain_vault {
+                        println!("- vault commitment: match");
+                    } else {
+                        println!("- vault commitment: mismatch");
+                    }
+
+                    // Storage commitment
+                    let local_storage = local_header.storage_commitment();
+                    let on_chain_storage = on_chain_header.storage_commitment();
+                    if local_storage == on_chain_storage {
+                        println!("- storage commitment: match");
+                    } else {
+                        println!("- storage commitment: mismatch");
+                    }
+
+                    // Code commitment
+                    let local_code = local_header.code_commitment();
+                    let on_chain_code = on_chain_header.code_commitment();
+                    if local_code == on_chain_code {
+                        println!("- code commitment: match");
+                    } else {
+                        println!("- code commitment: mismatch");
+                    }
+                }
+                miden_client::rpc::domain::account::FetchedAccount::Private(_, summary) => {
+                    println!(
+                        "- account exists: yes (last block: {})",
+                        summary.last_block_num
+                    );
+
+                    // Can only compare overall commitment for private accounts
+                    if local_commitment == on_chain_commitment {
+                        println!("- commitment: match");
+                    } else {
+                        println!("- commitment: mismatch");
+                        println!("    local:    {}", local_commitment);
+                        println!("    on-chain: {}", on_chain_commitment);
+                    }
+
+                    println!("- detailed comparison unavailable (on-chain account is private)");
+                }
+            }
+        }
+        Err(err) => {
+            println!("- account exists: no");
+            println!("- error: {err}");
+        }
+    }
+
+    Ok(())
 }
 
 async fn validate_note(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
