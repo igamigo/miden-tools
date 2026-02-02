@@ -6,7 +6,7 @@ Lightweight CLI utilities for inspecting Miden files, local stores, and RPC endp
 
 ```bash
 # From source
-git clone https://github.com/youruser/miden-tools.git
+git clone https://github.com/igamigo/miden-tools.git
 cd miden-tools
 make install
 ```
