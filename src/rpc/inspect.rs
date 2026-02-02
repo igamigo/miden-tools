@@ -421,10 +421,7 @@ async fn validate_note(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
                         height.as_u32()
                     );
                 } else {
-                    println!(
-                        "- nullifier {} not found (unspent or not yet known)",
-                        nullifier
-                    );
+                    println!("- nullifier {} not found (unspent)", nullifier);
                 }
             }
             Err(err) => println!("- failed to check nullifier {}: {err}", nullifier),

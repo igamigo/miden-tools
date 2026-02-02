@@ -64,7 +64,7 @@ Inspecting note.mno as NoteFile
 Validation (network: https://rpc.devnet.miden.io):
 - validation path: local inclusion proof (block header check)
 - local inclusion proof: ok (index 0)
-- nullifier 0xa2d4a93f342f2d215ef16fb24e4696d06ac250abfb8c13e2e607523ca2188575 not found (unspent or not yet known)
+- nullifier 0xa2d4a93f342f2d215ef16fb24e4696d06ac250abfb8c13e2e607523ca2188575 not found (unspent)
 ```
 
 ### RPC Commands
@@ -121,6 +121,8 @@ Note 0x0e18ee4177e7c6b32d19e9a81200cb86a7afd50828a1c5384ffd2b8fc41e167e:
 ### Store Commands
 
 Inspect local miden-client sqlite stores:
+
+![Store TUI](assets/store-tui.png)
 
 ```bash
 distaff store path                                    # Print default store path
