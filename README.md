@@ -34,7 +34,8 @@ distaff inspect <path> --validate --network devnet
 |------|-------------|
 | `--validate` | Validate against a node. For notes: checks inclusion proof and nullifier status. For accounts: checks on-chain existence, state comparison, and staleness detection. |
 
-#### Example: Inspect a Note File with Validation
+<details>
+<summary><strong>Example: Inspect a Note File with Validation</strong></summary>
 
 ```bash
 # First, fetch and save a note from devnet
@@ -67,6 +68,8 @@ Validation (network: https://rpc.devnet.miden.io):
 - nullifier 0xa2d4a93f342f2d215ef16fb24e4696d06ac250abfb8c13e2e607523ca2188575 not found (unspent)
 ```
 
+</details>
+
 ### RPC Commands
 
 Query Miden nodes directly:
@@ -83,7 +86,8 @@ distaff rpc account <address-or-account-id> --verbose --network devnet
 | `--verbose` | Show detailed output (e.g., full account vault contents) |
 | `--save <path>` | Save fetched note to a file (for `rpc note` command) |
 
-#### Devnet Examples
+<details>
+<summary><strong>Devnet Examples</strong></summary>
 
 ```bash
 # Check devnet status and latest block
@@ -117,6 +121,8 @@ Note 0x0e18ee4177e7c6b32d19e9a81200cb86a7afd50828a1c5384ffd2b8fc41e167e:
 - inputs (P2ID):
   target account: 0xfa0000000000bb800000cc000000de
 ```
+
+</details>
 
 ### Store Commands
 
@@ -231,7 +237,9 @@ Output:
 ```
 Note tag: 1048576000
 - raw (hex): 0x3e800000
-- decoded: 0x3e800000
+- binary: 00111110100000000000000000000000
+- likely account target: yes (9 high bits set, 23 low bits zero)
+- matches account prefixes starting with: 0x3e80...
 ```
 
 </details>

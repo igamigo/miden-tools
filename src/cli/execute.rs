@@ -240,7 +240,33 @@ fn execute_parse(command: ParseCommand) -> Result<()> {
             let tag = NoteTag::from(raw);
             println!("Note tag: {}", tag);
             println!("- raw (hex): 0x{raw:08x}");
-            println!("- decoded: {}", crate::render::note::format_note_tag(tag));
+            println!("- binary: {:032b}", raw);
+
+            // Check if this looks like an account target tag
+            // Account target tags use the N most significant bits of an account ID prefix
+            // Default is 14 bits, meaning the lower 18 bits should be zero
+            let trailing_zeros = raw.trailing_zeros();
+            if trailing_zeros >= 18 {
+                let significant_bits = 32 - trailing_zeros;
+                println!(
+                    "- likely account target: yes ({} high bits set, {} low bits zero)",
+                    significant_bits, trailing_zeros
+                );
+                // The high bits would match account IDs with this prefix
+                let prefix_bits = raw >> (32 - 16); // Show as 16-bit prefix
+                println!(
+                    "- matches account prefixes starting with: 0x{:04x}...",
+                    prefix_bits
+                );
+            } else if trailing_zeros >= 16 {
+                println!(
+                    "- possible account target: yes ({} low bits zero, default is 18)",
+                    trailing_zeros
+                );
+            } else {
+                println!("- likely account target: no (use case tag or custom structure)");
+            }
+
             Ok(())
         }
         ParseCommand::Address { address, network } => {
