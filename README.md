@@ -153,7 +153,8 @@ distaff parse address <bech32-or-id> --network testnet
 distaff parse note-tag <tag>                          # Parse note tag
 ```
 
-#### Parse Examples
+<details>
+<summary><strong>Parse Examples</strong></summary>
 
 **Parse a hex word into field elements:**
 ```bash
@@ -232,6 +233,8 @@ Note tag: 1048576000
 - raw (hex): 0x3e800000
 - decoded: 0x3e800000
 ```
+
+</details>
 
 ### Networks
 
