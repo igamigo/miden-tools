@@ -263,7 +263,7 @@ make install    # Install locally
 
 ## Contributing
 
-For contributing to the underlying `miden-client` library, see the [miden-client contributing guide](https://github.com/0xPolygonMiden/miden-client/blob/main/CONTRIBUTING.md).
+For contributing, see the [miden-client contributing guide](https://github.com/0xPolygonMiden/miden-client/blob/main/CONTRIBUTING.md) which also apply here.
 
 ## Notes
 
