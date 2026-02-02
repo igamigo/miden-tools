@@ -172,9 +172,9 @@ distaff parse word 1234 5678 9012 3456
 ```
 Output:
 ```
-Word:
-- hex: 0x00000000000004d200000000000016...
-- felts: [1234, 5678, 9012, 3456]
+Word (as hex): 0xd2040000000000002e160000000000003423000000000000800d000000000000
+Word (decimal felts): [1234, 5678, 9012, 3456]
+Word (hex felts): [0x00000000000004d2, 0x000000000000162e, 0x0000000000002334, 0x0000000000000d80]
 ```
 
 **Parse an account ID from hex:**
@@ -193,18 +193,18 @@ Account ID: 0xd0da1f806b49552007c49c95d519d7
 
 **Parse a bech32 address:**
 ```bash
-distaff parse address miden1wqm2csxky55j5qqlynyk65xvau4cjt5sxtgnrqacvzgmk3z
+distaff parse address mtst1argd58uqddy42gq8cjwft4ge6uyeaew8
 ```
 Output:
 ```
-Address: miden1wqm2csxky55j5qqlynyk65xvau4cjt5sxtgnrqacvzgmk3z
-- network: mainnet
+Address: mtst1argd58uqddy42gq8cjwft4ge6uyeaew8
+- network: mtst
 - account id: 0xd0da1f806b49552007c49c95d519d7
 - account type: FungibleFaucet
 - storage mode: public
-- note tag length: 16
-- note tag: 0x8d0da1f8 (local, use case 1293, payload 0x1f8)
-- bech32: miden1wqm2csxky55j5qqlynyk65xvau4cjt5sxtgnrqacvzgmk3z
+- note tag length: 14
+- note tag: 0x34360000
+- bech32: mtst1argd58uqddy42gq8cjwft4ge6uyeaew8
 ```
 
 **Encode an account ID as a bech32 address:**
@@ -213,13 +213,13 @@ distaff parse address 0xd0da1f806b49552007c49c95d519d7 --network testnet
 ```
 Output:
 ```
-Address: test1wqm2csxky55j5qqlynyk65xvau4cjt5sxtgnrqa7hxjfq
-- network: testnet
+Address: mtst1argd58uqddy42gq8cjwft4ge6uyeaew8
+- network: mtst
 - account id: 0xd0da1f806b49552007c49c95d519d7
 - account type: FungibleFaucet
 - storage mode: public
-- note tag length: 16
-- note tag: 0x8d0da1f8 (local, use case 1293, payload 0x1f8)
+- note tag length: 14
+- note tag: 0x34360000
 ```
 
 **Parse a note tag:**
@@ -228,9 +228,9 @@ distaff parse note-tag 0x3e800000
 ```
 Output:
 ```
-Note tag: NoteTag(1048576000)
+Note tag: 1048576000
 - raw (hex): 0x3e800000
-- decoded: 0x3e800000 (network, use case 62, payload 0x0)
+- decoded: 0x3e800000
 ```
 
 ### Networks
