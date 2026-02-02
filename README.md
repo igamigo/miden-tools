@@ -153,6 +153,86 @@ distaff parse address <bech32-or-id> --network testnet
 distaff parse note-tag <tag>                          # Parse note tag
 ```
 
+#### Parse Examples
+
+**Parse a hex word into field elements:**
+```bash
+distaff parse word 0xa657a127211172b9b305d06c6e076dd1edbf67c8b1a32c063647d5f7bf456131
+```
+Output:
+```
+Word:
+- hex: 0xa657a127211172b9b305d06c6e076dd1edbf67c8b1a32c063647d5f7bf456131
+- felts: [11989477707968983737, 12897825395603836369, 17167126929048124422, 3909909991706149169]
+```
+
+**Build a word from four field elements:**
+```bash
+distaff parse word 1234 5678 9012 3456
+```
+Output:
+```
+Word:
+- hex: 0x00000000000004d200000000000016...
+- felts: [1234, 5678, 9012, 3456]
+```
+
+**Parse an account ID from hex:**
+```bash
+distaff parse account-id 0xd0da1f806b49552007c49c95d519d7
+```
+Output:
+```
+Account ID: 0xd0da1f806b49552007c49c95d519d7
+- account id (hex): 0xd0da1f806b49552007c49c95d519d7
+- account type: FungibleFaucet
+- storage mode: public
+- public state: yes
+- account ID version: Version0
+```
+
+**Parse a bech32 address:**
+```bash
+distaff parse address miden1wqm2csxky55j5qqlynyk65xvau4cjt5sxtgnrqacvzgmk3z
+```
+Output:
+```
+Address: miden1wqm2csxky55j5qqlynyk65xvau4cjt5sxtgnrqacvzgmk3z
+- network: mainnet
+- account id: 0xd0da1f806b49552007c49c95d519d7
+- account type: FungibleFaucet
+- storage mode: public
+- note tag length: 16
+- note tag: 0x8d0da1f8 (local, use case 1293, payload 0x1f8)
+- bech32: miden1wqm2csxky55j5qqlynyk65xvau4cjt5sxtgnrqacvzgmk3z
+```
+
+**Encode an account ID as a bech32 address:**
+```bash
+distaff parse address 0xd0da1f806b49552007c49c95d519d7 --network testnet
+```
+Output:
+```
+Address: test1wqm2csxky55j5qqlynyk65xvau4cjt5sxtgnrqa7hxjfq
+- network: testnet
+- account id: 0xd0da1f806b49552007c49c95d519d7
+- account type: FungibleFaucet
+- storage mode: public
+- note tag length: 16
+- note tag: 0x8d0da1f8 (local, use case 1293, payload 0x1f8)
+```
+
+**Parse a note tag:**
+```bash
+distaff parse note-tag 0x3e800000
+```
+Output:
+```
+Note tag: NoteTag(1048576000)
+- raw (hex): 0x3e800000
+- decoded: 0x3e800000 (network, use case 62, payload 0x0)
+```
+
 ### Networks
 
 - `testnet` (default)
