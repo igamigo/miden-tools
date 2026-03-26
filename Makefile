@@ -7,7 +7,7 @@ help: ## Show description of all commands
 # Tooling
 
 .PHONY: lint
-lint: format clippy ## Run all linting tasks (format, clippy)
+lint: format clippy taplo typos ## Run all linting tasks
 
 .PHONY: format
 format: ## Format Rust sources
@@ -20,6 +20,14 @@ format-check: ## Check Rust formatting without modifying files
 .PHONY: clippy
 clippy: ## Run Clippy with warnings as errors
 	cargo clippy --all-targets -- -D warnings
+
+.PHONY: taplo
+taplo: ## Check TOML formatting
+	taplo fmt --check
+
+.PHONY: typos
+typos: ## Check for typos
+	typos
 
 .PHONY: test
 test: ## Run all tests

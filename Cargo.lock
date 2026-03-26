@@ -1838,26 +1838,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "miden-distaff"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "crossterm 0.27.0",
- "dirs",
- "miden-client",
- "miden-client-cli",
- "miden-client-sqlite-store",
- "miden-crypto",
- "miden-protocol",
- "miden-standards",
- "miden-tx",
- "ratatui",
- "rusqlite",
- "tokio",
-]
-
-[[package]]
 name = "miden-formatting"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2053,6 +2033,26 @@ dependencies = [
  "regex",
  "thiserror",
  "walkdir",
+]
+
+[[package]]
+name = "miden-tools"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "crossterm 0.27.0",
+ "dirs",
+ "miden-client",
+ "miden-client-cli",
+ "miden-client-sqlite-store",
+ "miden-crypto",
+ "miden-protocol",
+ "miden-standards",
+ "miden-tx",
+ "ratatui",
+ "rusqlite",
+ "tokio",
 ]
 
 [[package]]
