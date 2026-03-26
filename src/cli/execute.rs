@@ -9,8 +9,8 @@ use crate::{
 };
 
 use super::{
-    Cli, Command, NoteTypeFilter, ParseCommand, RpcCommand, StoreAccountCommand, StoreCommand,
-    StoreNoteCommand, StoreTagCommand, StoreTxCommand,
+    Cli, Command, NoteTypeFilter, NtxCommand, ParseCommand, RpcCommand, StoreAccountCommand,
+    StoreCommand, StoreNoteCommand, StoreTagCommand, StoreTxCommand,
 };
 
 impl Cli {
@@ -32,6 +32,7 @@ impl Cli {
             Command::Rpc { command } => execute_rpc(command),
             Command::Store { command } => execute_store(command),
             Command::Parse { command } => execute_parse(command),
+            Command::Ntx { command } => execute_ntx(command),
         }
     }
 }
@@ -329,6 +330,27 @@ fn execute_parse(command: ParseCommand) -> Result<()> {
 
                 Ok(())
             }
+        }
+        ParseCommand::TxInputs { file_path, top } => rpc::tx_inputs::inspect(file_path, top),
+    }
+}
+
+fn execute_ntx(command: NtxCommand) -> Result<()> {
+    match command {
+        NtxCommand::Debug {
+            account,
+            note_ids,
+            verbose,
+            network,
+            endpoint,
+        } => {
+            let (account_id, _) = parse::account_id(&account)?;
+            let note_ids: Vec<_> = note_ids
+                .iter()
+                .map(|id| parse::note_id(id))
+                .collect::<Result<_>>()?;
+            let endpoint = config::resolve_endpoint_with_fallback(network, endpoint)?;
+            rpc::ntx::debug_ntx(account_id, note_ids, endpoint, verbose)
         }
     }
 }

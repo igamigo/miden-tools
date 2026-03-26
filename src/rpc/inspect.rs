@@ -4,18 +4,18 @@ use anyhow::{Context, Result, anyhow};
 use miden_client::{
     Word,
     account::{AccountFile, AccountHeader},
-    note::{NoteAttachment, NoteHeader, NoteId, NoteInclusionProof, Nullifier},
+    note::{NoteHeader, NoteId, NoteInclusionProof, Nullifier},
     notes::NoteFile,
     rpc::{Endpoint, GrpcClient, NodeRpcClient},
     utils::Deserializable,
 };
 use miden_crypto::merkle::SparseMerklePath;
 use miden_protocol::block::BlockNumber;
-use miden_protocol::note::NoteAttachmentContent;
 use tokio::runtime::Runtime;
 
 use crate::render::note::{
-    format_note_tag, render_assets, render_well_known_inputs, well_known_label_from_root,
+    format_note_tag, render_assets, render_attachment, render_well_known_inputs,
+    well_known_label_from_root,
 };
 use crate::util::net::DEFAULT_TIMEOUT_MS;
 
@@ -145,36 +145,12 @@ fn render_note_file(note_file: &NoteFile) {
             println!("- sender: {}", metadata.sender());
             println!("- type: {:?}", metadata.note_type());
             println!("- tag: {}", format_note_tag(metadata.tag()));
-            render_note_attachment(metadata.attachment());
+            render_attachment(metadata.attachment(), "- ");
             render_assets(note.assets());
             println!("- script root: {script_label}");
             println!("- created in block: {}", location.block_num().as_u32());
             println!("- node index in block: {}", location.node_index_in_block());
             render_well_known_inputs(&script_root, note.inputs().values(), "- ", "  ");
-        }
-    }
-}
-
-fn render_note_attachment(attachment: &NoteAttachment) {
-    let scheme = attachment.attachment_scheme();
-    let kind = attachment.attachment_kind();
-
-    // Only display if there's an actual attachment
-    if kind.is_none() {
-        return;
-    }
-
-    println!("- attachment scheme: {}", scheme.as_u32());
-    match attachment.content() {
-        NoteAttachmentContent::None => {}
-        NoteAttachmentContent::Word(word) => {
-            println!("- attachment content: {}", word.to_hex());
-        }
-        NoteAttachmentContent::Array(array) => {
-            println!(
-                "- attachment content: array (commitment: {})",
-                array.commitment().to_hex()
-            );
         }
     }
 }
@@ -508,6 +484,7 @@ fn render_fetched_note(fetched: &miden_client::rpc::domain::note::FetchedNote) {
             };
             println!("- script root: {script_label}");
             render_well_known_inputs(&script_root, note.inputs().values(), "- ", "  ");
+            render_attachment(metadata.attachment(), "- ");
         }
         miden_client::rpc::domain::note::FetchedNote::Private(..) => {
             println!("- visibility: private (details not available)");

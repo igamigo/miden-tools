@@ -49,6 +49,11 @@ pub enum Command {
         #[command(subcommand)]
         command: ParseCommand,
     },
+    /// Network transaction utilities
+    Ntx {
+        #[command(subcommand)]
+        command: NtxCommand,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -170,6 +175,14 @@ pub enum ParseCommand {
         #[arg(long, value_enum)]
         network: Option<Network>,
     },
+    /// Inspect serialized TransactionInputs and print size-heavy contributors
+    TxInputs {
+        /// Path to a serialized `TransactionInputs` binary file
+        file_path: PathBuf,
+        /// Number of largest contributors to show in ranked sections
+        #[arg(long, default_value_t = 10)]
+        top: usize,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -258,6 +271,27 @@ pub enum StoreTxCommand {
         /// Path to the sqlite3 store file (falls back to config)
         #[arg(long, value_name = "path")]
         store: Option<PathBuf>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum NtxCommand {
+    /// Test-execute a network transaction: fetch notes, check consumability, and simulate execution
+    Debug {
+        /// Account address (bech32) or account ID (0x-hex)
+        account: String,
+        /// One or more note IDs (0x-hex)
+        #[arg(required = true, num_args = 1..)]
+        note_ids: Vec<String>,
+        /// Show detailed diagnostics (consumption check, sync progress)
+        #[arg(long, default_value_t = false)]
+        verbose: bool,
+        /// Network to query (falls back to config)
+        #[arg(long, value_enum)]
+        network: Option<Network>,
+        /// Custom endpoint (protocol://host[:port]) when --network custom
+        #[arg(long)]
+        endpoint: Option<String>,
     },
 }
 

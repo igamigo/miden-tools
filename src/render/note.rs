@@ -2,9 +2,10 @@ use miden_client::{
     Felt, Word,
     account::AccountId,
     asset::Asset,
-    note::{NoteAssets, NoteExecutionHint, NoteTag, NoteType, WellKnownNote},
+    note::{NoteAssets, NoteAttachment, NoteExecutionHint, NoteTag, NoteType, WellKnownNote},
 };
 use miden_protocol::block::BlockNumber;
+use miden_standards::note::NetworkAccountTarget;
 
 use super::asset::format_asset;
 
@@ -234,5 +235,48 @@ fn format_asset_from_word(word: Word) -> String {
             ),
         },
         Err(_) => format!("unknown asset ({})", word.to_hex()),
+    }
+}
+
+/// Render a note attachment, decoding well-known schemes like [`NetworkAccountTarget`].
+pub(crate) fn render_attachment(attachment: &NoteAttachment, prefix: &str) {
+    let kind = attachment.attachment_kind();
+    if kind.is_none() {
+        return;
+    }
+
+    match NetworkAccountTarget::try_from(attachment) {
+        Ok(target) => {
+            println!(
+                "{prefix}attachment: NetworkAccountTarget (scheme={})",
+                attachment.attachment_scheme().as_u32()
+            );
+            println!("{prefix}  target account: {}", target.target_id());
+            println!(
+                "{prefix}  target storage mode: {}",
+                target.target_id().storage_mode()
+            );
+            println!("{prefix}  execution hint: {:?}", target.execution_hint());
+        }
+        Err(_) => {
+            let scheme = attachment.attachment_scheme();
+            println!(
+                "{prefix}attachment: scheme={}, kind={:?}",
+                scheme.as_u32(),
+                kind,
+            );
+            match attachment.content() {
+                miden_protocol::note::NoteAttachmentContent::Word(word) => {
+                    println!("{prefix}  content: {}", word.to_hex());
+                }
+                miden_protocol::note::NoteAttachmentContent::Array(array) => {
+                    println!(
+                        "{prefix}  content: array (commitment: {})",
+                        array.commitment().to_hex()
+                    );
+                }
+                miden_protocol::note::NoteAttachmentContent::None => {}
+            }
+        }
     }
 }

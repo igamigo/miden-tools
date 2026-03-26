@@ -170,6 +170,7 @@ distaff parse word <felt1> <felt2> <felt3> <felt4>    # Build word from felts
 distaff parse account-id <address-or-id>              # Parse account ID
 distaff parse address <bech32-or-id> --network testnet
 distaff parse note-tag <tag>                          # Parse note tag
+distaff parse tx-inputs <tx-inputs.bin> --top 20      # Rank largest TransactionInputs sections
 ```
 
 <details>
@@ -253,6 +254,44 @@ Note tag: 1048576000
 - binary: 00111110100000000000000000000000
 - likely account target: yes (9 high bits set, 23 low bits zero)
 - matches account prefixes starting with: 0x3e80...
+```
+
+</details>
+
+### Network Transaction Debugging
+
+Debug network transaction note consumption:
+
+```bash
+distaff ntx debug <account-address-or-id> <note-id>... --network testnet
+distaff ntx debug <account-address-or-id> <note-id>... --network testnet --verbose
+```
+
+This command fetches notes from the network, imports the target account, and runs the `NoteConsumptionChecker` to determine whether notes can be consumed by the account. Useful for diagnosing why network notes were not consumed.
+
+| Flag | Description |
+|------|-------------|
+| `--verbose` | Show sync progress, account import details |
+
+<details>
+<summary><strong>Example</strong></summary>
+
+```bash
+distaff ntx debug mtst1az3mkad6ajsnxspxjdp7ysf40qazelsf \
+  0x634ee6c3bf65ce2459a0d9669f200e0b8dee8574a8275f7ab9c14769486f789c \
+  --network testnet --verbose
+```
+
+Output:
+```
+Fetching 1 note(s) from https://rpc.testnet.miden.io...
+Fetched 1 public note(s)
+  note 0x634ee6c3bf65ce2459a0d9669f200e0b8dee8574a8275f7ab9c14769486f789c has non-standard attachment (scheme=1, kind=Word)
+Synced client to block 1293358
+Importing account 0xa3bb75baeca13340269343e2413578...
+
+Consumption check:
+  note 0x634ee6c3bf65ce2459a0d9669f200e0b8dee8574a8275f7ab9c14769486f789c: consumable
 ```
 
 </details>

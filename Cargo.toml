@@ -12,11 +12,13 @@ anyhow                    = { version = "1.0" }
 clap                      = { features = ["derive"], version = "4.5" }
 crossterm                 = { version = "0.27" }
 dirs                      = { version = "6" }
-miden-client              = { features = ["tonic"], version = "0.13" }
-miden-client-cli          = { version = "0.13" }
-miden-client-sqlite-store = { version = "0.13" }
+miden-client              = { version = "0.13.3", features = ["tonic"] }
+miden-client-cli          = { version = "0.13.3" }
+miden-client-sqlite-store = { version = "0.13.3" }
 miden-crypto              = { version = "0.19" }
 miden-protocol            = { version = "0.13" }
+miden-standards           = { version = "0.13" }
+miden-tx                  = { version = "0.13" }
 ratatui                   = { version = "0.27" }
-rusqlite                  = { features = ["bundled"], version = "0.36" }
+rusqlite                  = { features = ["bundled"], version = "0.37" }
 tokio                     = { features = ["rt-multi-thread"], version = "1.48" }
