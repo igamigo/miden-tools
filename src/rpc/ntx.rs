@@ -62,24 +62,44 @@ pub(crate) fn debug_ntx(
 
         println!("Fetched {} public note(s)", notes.len());
 
-        // Check attachments for network account targeting
+        // Check attachments for network account targeting.
+        // The network transaction builder only picks up notes with a valid NetworkAccountTarget
+        // attachment whose target account ID matches. Notes without this attachment or with a
+        // mismatched target will not be executed by the network.
         for note in &notes {
             let attachment = note.metadata().attachment();
             match miden_standards::note::NetworkAccountTarget::try_from(attachment) {
                 Ok(target) => {
                     let target_id = target.target_id();
-                    let matches = target_id == account_id;
-                    println!(
-                        "  note {} targets network account {} (hint: {:?}){}",
-                        note.id(),
-                        target_id,
-                        target.execution_hint(),
-                        if matches { "" } else { " ← MISMATCH" },
-                    );
+                    if target_id == account_id {
+                        println!(
+                            "  note {} targets network account {} (hint: {:?})",
+                            note.id(),
+                            target_id,
+                            target.execution_hint(),
+                        );
+                    } else {
+                        println!(
+                            "  note {} targets network account {} (hint: {:?}) ← MISMATCH (expected {})",
+                            note.id(),
+                            target_id,
+                            target.execution_hint(),
+                            account_id,
+                        );
+                        println!(
+                            "    warning: the network transaction builder will not pick up this note for account {}",
+                            account_id,
+                        );
+                    }
                 }
                 Err(_) => {
                     let kind = attachment.attachment_kind();
-                    if !kind.is_none() {
+                    if kind.is_none() {
+                        println!(
+                            "  note {} has no NetworkAccountTarget attachment",
+                            note.id(),
+                        );
+                    } else {
                         println!(
                             "  note {} has non-standard attachment (scheme={}, kind={:?})",
                             note.id(),
@@ -87,6 +107,9 @@ pub(crate) fn debug_ntx(
                             kind,
                         );
                     }
+                    println!(
+                        "    warning: the network transaction builder requires a NetworkAccountTarget attachment to pick up this note",
+                    );
                 }
             }
         }

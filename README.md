@@ -287,7 +287,8 @@ Output:
 Fetching 1 note(s) from https://rpc.testnet.miden.io...
 Fetched 1 public note(s)
   note 0x634ee6c3bf65ce2459a0d9669f200e0b8dee8574a8275f7ab9c14769486f789c has non-standard attachment (scheme=1, kind=Word)
-Synced client to block 1293358
+    warning: the network transaction builder requires a NetworkAccountTarget attachment to pick up this note
+Synced client to block 1293467
 Importing account 0xa3bb75baeca13340269343e2413578...
 
 Consumption check:
