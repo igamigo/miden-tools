@@ -62,6 +62,42 @@ pub(crate) fn debug_ntx(
 
         println!("Fetched {} public note(s)", notes.len());
 
+        // Warn if the account is not a network account
+        if !account_id.is_network() {
+            println!(
+                "  warning: account {} has storage mode '{}', not 'network'",
+                account_id,
+                account_id.storage_mode(),
+            );
+            println!(
+                "    the network transaction builder only executes transactions for network accounts"
+            );
+        }
+
+        // Check if notes are already consumed (nullifier check)
+        {
+            let nullifiers: std::collections::BTreeSet<_> =
+                notes.iter().map(|n| n.nullifier()).collect();
+            if let Ok(heights) = rpc
+                .get_nullifier_commit_heights(
+                    nullifiers.clone(),
+                    miden_protocol::block::BlockNumber::GENESIS,
+                )
+                .await
+            {
+                for nullifier in &nullifiers {
+                    if let Some(height) = heights.get(nullifier).copied().flatten() {
+                        let note = notes.iter().find(|n| n.nullifier() == *nullifier).unwrap();
+                        println!(
+                            "  warning: note {} already consumed (nullifier spent at block {})",
+                            note.id(),
+                            height.as_u32(),
+                        );
+                    }
+                }
+            }
+        }
+
         // Check attachments for network account targeting.
         // The network transaction builder only picks up notes with a valid NetworkAccountTarget
         // attachment whose target account ID matches. Notes without this attachment or with a
