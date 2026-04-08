@@ -1,6 +1,6 @@
 [package]
-name = "miden-tools"
-version = "0.1.0"
+name = "teasel"
+version = "0.14.0"
 edition = "2024"
 description = "Lightweight CLI utilities for inspecting Miden files, local stores, and RPC endpoints"
 authors = ["Ignacio Amigo", "miden contributors"]
@@ -12,7 +12,7 @@ categories = ["command-line-utilities", "cryptography::cryptocurrencies"]
 rust-version = "1.91"
 
 [[bin]]
-name = "distaff"
+name = "teasel"
 path = "src/main.rs"
 
 [dependencies]

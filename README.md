@@ -1,4 +1,4 @@
-# Distaff
+# Teasel
 
 Lightweight CLI utilities for inspecting Miden files, local stores, and RPC endpoints.
 
@@ -6,14 +6,17 @@ Lightweight CLI utilities for inspecting Miden files, local stores, and RPC endp
 
 ```bash
 # From source
-git clone https://github.com/igamigo/miden-tools.git
-cd miden-tools
+cargo install teasel
+
+# Or from source
+git clone https://github.com/igamigo/teasel.git
+cd teasel
 make install
 ```
 
 ## Configuration
 
-Distaff automatically reads `miden-client` configuration if present:
+Teasel automatically reads `miden-client` configuration if present:
 - `.miden/miden-client.toml` (local directory)
 - `~/.miden/miden-client.toml` (global)
 
@@ -26,8 +29,8 @@ When a config is found, store path and RPC endpoint are used as defaults. You ca
 Inspect serialized note or account files:
 
 ```bash
-distaff inspect <path-to-note-or-account-file>
-distaff inspect <path> --validate --network devnet
+teasel inspect <path-to-note-or-account-file>
+teasel inspect <path> --validate --network devnet
 ```
 
 | Flag | Description |
@@ -39,10 +42,10 @@ distaff inspect <path> --validate --network devnet
 
 ```bash
 # First, fetch and save a note from devnet
-distaff rpc note 0x0e18ee4177e7c6b32d19e9a81200cb86a7afd50828a1c5384ffd2b8fc41e167e --network devnet --save note.mno
+teasel rpc note 0x0e18ee4177e7c6b32d19e9a81200cb86a7afd50828a1c5384ffd2b8fc41e167e --network devnet --save note.mno
 
 # Then inspect with validation
-distaff inspect note.mno --validate --network devnet
+teasel inspect note.mno --validate --network devnet
 ```
 
 Output:
@@ -88,10 +91,10 @@ Validation (network: https://rpc.devnet.miden.io):
 Query Miden nodes directly:
 
 ```bash
-distaff rpc status --network devnet
-distaff rpc block <block-num> --network devnet
-distaff rpc note <note-id> --network devnet
-distaff rpc account <address-or-account-id> --verbose --network devnet
+teasel rpc status --network devnet
+teasel rpc block <block-num> --network devnet
+teasel rpc note <note-id> --network devnet
+teasel rpc account <address-or-account-id> --verbose --network devnet
 ```
 
 | Flag | Description |
@@ -104,19 +107,19 @@ distaff rpc account <address-or-account-id> --verbose --network devnet
 
 ```bash
 # Check devnet status and latest block
-distaff rpc status --network devnet
+teasel rpc status --network devnet
 
 # Query the native asset faucet account
-distaff rpc account 0xd0da1f806b49552007c49c95d519d7 --network devnet
+teasel rpc account 0xd0da1f806b49552007c49c95d519d7 --network devnet
 
 # Get block details
-distaff rpc block 273518 --network devnet
+teasel rpc block 273518 --network devnet
 
 # Fetch a note by ID
-distaff rpc note 0x0e18ee4177e7c6b32d19e9a81200cb86a7afd50828a1c5384ffd2b8fc41e167e --network devnet
+teasel rpc note 0x0e18ee4177e7c6b32d19e9a81200cb86a7afd50828a1c5384ffd2b8fc41e167e --network devnet
 
 # Fetch and save a note to a file
-distaff rpc note 0x0e18ee4177e7c6b32d19e9a81200cb86a7afd50828a1c5384ffd2b8fc41e167e --network devnet --save note.mno
+teasel rpc note 0x0e18ee4177e7c6b32d19e9a81200cb86a7afd50828a1c5384ffd2b8fc41e167e --network devnet --save note.mno
 ```
 
 Example output for note query:
@@ -144,16 +147,16 @@ Inspect local miden-client sqlite stores:
 ![Store TUI](assets/store-tui.png)
 
 ```bash
-distaff store path                                    # Print default store path
-distaff store info                                    # Print store summary
-distaff store account list                            # List tracked accounts
-distaff store account get --account <address-or-id>   # Get account details
-distaff store note list                               # List notes
-distaff store note get <note-id>                      # Get note details
-distaff store tag list                                # List tracked note tags
-distaff store tx list                                 # List transactions
-distaff store tx inspect <tx-id> --verbose            # Inspect transaction
-distaff store tui                                     # Interactive store browser
+teasel store path                                    # Print default store path
+teasel store info                                    # Print store summary
+teasel store account list                            # List tracked accounts
+teasel store account get --account <address-or-id>   # Get account details
+teasel store note list                               # List notes
+teasel store note get <note-id>                      # Get note details
+teasel store tag list                                # List tracked note tags
+teasel store tx list                                 # List transactions
+teasel store tx inspect <tx-id> --verbose            # Inspect transaction
+teasel store tui                                     # Interactive store browser
 ```
 
 | Flag | Description |
@@ -166,11 +169,11 @@ distaff store tui                                     # Interactive store browse
 Parse and convert common Miden formats:
 
 ```bash
-distaff parse word <felt1> <felt2> <felt3> <felt4>    # Build word from felts
-distaff parse account-id <address-or-id>              # Parse account ID
-distaff parse address <bech32-or-id> --network testnet
-distaff parse note-tag <tag>                          # Parse note tag
-distaff parse tx-inputs <tx-inputs.bin> --top 20      # Rank largest TransactionInputs sections
+teasel parse word <felt1> <felt2> <felt3> <felt4>    # Build word from felts
+teasel parse account-id <address-or-id>              # Parse account ID
+teasel parse address <bech32-or-id> --network testnet
+teasel parse note-tag <tag>                          # Parse note tag
+teasel parse tx-inputs <tx-inputs.bin> --top 20      # Rank largest TransactionInputs sections
 ```
 
 <details>
@@ -178,7 +181,7 @@ distaff parse tx-inputs <tx-inputs.bin> --top 20      # Rank largest Transaction
 
 **Parse a hex word into field elements:**
 ```bash
-distaff parse word 0xa657a127211172b9b305d06c6e076dd1edbf67c8b1a32c063647d5f7bf456131
+teasel parse word 0xa657a127211172b9b305d06c6e076dd1edbf67c8b1a32c063647d5f7bf456131
 ```
 Output:
 ```
@@ -189,7 +192,7 @@ Word (hex felts): [0xb972112127a157a6, 0xd16d076e6cd005b3, 0x062ca3b1c867bfed, 0
 
 **Build a word from four field elements:**
 ```bash
-distaff parse word 1234 5678 9012 3456
+teasel parse word 1234 5678 9012 3456
 ```
 Output:
 ```
@@ -200,7 +203,7 @@ Word (hex felts): [0x00000000000004d2, 0x000000000000162e, 0x0000000000002334, 0
 
 **Parse an account ID from hex:**
 ```bash
-distaff parse account-id 0xd0da1f806b49552007c49c95d519d7
+teasel parse account-id 0xd0da1f806b49552007c49c95d519d7
 ```
 Output:
 ```
@@ -214,7 +217,7 @@ Account ID: 0xd0da1f806b49552007c49c95d519d7
 
 **Parse a bech32 address:**
 ```bash
-distaff parse address mtst1argd58uqddy42gq8cjwft4ge6uyeaew8
+teasel parse address mtst1argd58uqddy42gq8cjwft4ge6uyeaew8
 ```
 Output:
 ```
@@ -230,7 +233,7 @@ Address: mtst1argd58uqddy42gq8cjwft4ge6uyeaew8
 
 **Encode an account ID as a bech32 address:**
 ```bash
-distaff parse address 0xd0da1f806b49552007c49c95d519d7 --network testnet
+teasel parse address 0xd0da1f806b49552007c49c95d519d7 --network testnet
 ```
 Output:
 ```
@@ -245,7 +248,7 @@ Address: mtst1argd58uqddy42gq8cjwft4ge6uyeaew8
 
 **Parse a note tag:**
 ```bash
-distaff parse note-tag 0x3e800000
+teasel parse note-tag 0x3e800000
 ```
 Output:
 ```
@@ -263,8 +266,8 @@ Note tag: 1048576000
 Debug network transaction note consumption:
 
 ```bash
-distaff ntx debug <account-address-or-id> <note-id>... --network testnet
-distaff ntx debug <account-address-or-id> <note-id>... --network testnet --verbose
+teasel ntx debug <account-address-or-id> <note-id>... --network testnet
+teasel ntx debug <account-address-or-id> <note-id>... --network testnet --verbose
 ```
 
 This command fetches notes from the network, imports the target account, and runs the `NoteConsumptionChecker` to determine whether notes can be consumed by the account. Useful for diagnosing why network notes were not consumed.
@@ -277,7 +280,7 @@ This command fetches notes from the network, imports the target account, and run
 <summary><strong>Example</strong></summary>
 
 ```bash
-distaff ntx debug mtst1az3mkad6ajsnxspxjdp7ysf40qazelsf \
+teasel ntx debug mtst1az3mkad6ajsnxspxjdp7ysf40qazelsf \
   0x634ee6c3bf65ce2459a0d9669f200e0b8dee8574a8275f7ab9c14769486f789c \
   --network testnet --verbose
 ```
@@ -320,5 +323,5 @@ For contributing, see the [miden-client contributing guide](https://github.com/0
 
 ## Notes
 
-- Built against `miden-client` `0.13`.
+- Built against `miden-client` `0.14`.
 - Licensed under MIT (see `LICENSE`).

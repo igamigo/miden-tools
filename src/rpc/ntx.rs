@@ -150,7 +150,7 @@ pub(crate) fn debug_ntx(
         }
 
         // ── 2. Create temp client ────────────────────────────────────────
-        let tmp_dir = std::env::temp_dir().join(format!("distaff-ntx-{}", std::process::id()));
+        let tmp_dir = std::env::temp_dir().join(format!("teasel-ntx-{}", std::process::id()));
         std::fs::create_dir_all(&tmp_dir)?;
         let store_path = tmp_dir.join("store.sqlite3");
 

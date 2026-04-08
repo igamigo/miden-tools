@@ -2140,26 +2140,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "miden-tools"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "crossterm 0.27.0",
- "dirs",
- "miden-client",
- "miden-client-cli",
- "miden-client-sqlite-store",
- "miden-crypto",
- "miden-protocol",
- "miden-standards",
- "miden-tx",
- "ratatui",
- "rusqlite",
- "tokio",
-]
-
-[[package]]
 name = "miden-tx"
 version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3938,6 +3918,26 @@ name = "target-triple"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "591ef38edfb78ca4771ee32cf494cb8771944bee237a9b91fc9c1424ac4b777b"
+
+[[package]]
+name = "teasel"
+version = "0.14.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "crossterm 0.27.0",
+ "dirs",
+ "miden-client",
+ "miden-client-cli",
+ "miden-client-sqlite-store",
+ "miden-crypto",
+ "miden-protocol",
+ "miden-standards",
+ "miden-tx",
+ "ratatui",
+ "rusqlite",
+ "tokio",
+]
 
 [[package]]
 name = "tempfile"

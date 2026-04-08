@@ -9,7 +9,7 @@ mod execute;
 
 #[derive(Debug, Parser)]
 #[command(
-    name = "distaff",
+    name = "teasel",
     about = "Lightweight helpers around miden-client",
     version = concat!(env!("CARGO_PKG_VERSION"), " (", env!("GIT_HASH"), ") [miden-client ", env!("MIDEN_CLIENT_VERSION"), "]")
 )]
