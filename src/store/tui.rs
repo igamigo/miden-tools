@@ -872,7 +872,7 @@ impl StoreTui {
         ));
         lines.push(label_line(
             "inputs",
-            &details.inputs().values().len().to_string(),
+            &details.storage().items().len().to_string(),
         ));
 
         // Inclusion info
@@ -884,7 +884,7 @@ impl StoreTui {
             ));
             lines.push(label_line(
                 "index",
-                &proof.location().node_index_in_block().to_string(),
+                &proof.location().block_note_tree_index().to_string(),
             ));
         }
 
@@ -918,7 +918,7 @@ impl StoreTui {
             &note.assets().num_assets().to_string(),
         ));
 
-        let commitment = NoteHeader::new(note.id(), note.metadata().clone()).commitment();
+        let commitment = NoteHeader::new(note.id(), note.metadata().clone()).to_commitment();
         lines.extend(hash_lines("commitment", &commitment.to_string()));
 
         if let Some(recipient) = note.recipient() {
@@ -935,7 +935,7 @@ impl StoreTui {
             }
             lines.push(label_line(
                 "inputs",
-                &recipient.inputs().values().len().to_string(),
+                &recipient.storage().items().len().to_string(),
             ));
         }
 
@@ -948,7 +948,7 @@ impl StoreTui {
             ));
             lines.push(label_line(
                 "index",
-                &proof.location().node_index_in_block().to_string(),
+                &proof.location().block_note_tree_index().to_string(),
             ));
         }
 

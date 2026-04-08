@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use miden_protocol::{
     account::StorageSlotType,
     transaction::{InputNote, TransactionInputs},
-    utils::{Deserializable, Serializable},
+    utils::serde::{Deserializable, Serializable},
 };
 
 const PROOF_SIZE_LIMIT_BYTES: usize = 4 * 1024 * 1024;
@@ -65,7 +65,6 @@ fn render_tx_inputs_stats(tx_inputs: &TransactionInputs, file_size: usize, top: 
     let tx_args_size = serialized_len(tx_inputs.tx_args());
     let advice_inputs_size = serialized_len(tx_inputs.advice_inputs());
     let foreign_account_code_size = serialized_len(&tx_inputs.foreign_account_code().to_vec());
-    let asset_witnesses_size = serialized_len(&tx_inputs.asset_witnesses().to_vec());
     let foreign_slot_names_size = serialized_len(tx_inputs.foreign_account_slot_names());
 
     let mut top_level = vec![
@@ -98,10 +97,6 @@ fn render_tx_inputs_stats(tx_inputs: &TransactionInputs, file_size: usize, top: 
             bytes: foreign_account_code_size,
         },
         SizeItem {
-            label: "asset_witnesses".into(),
-            bytes: asset_witnesses_size,
-        },
-        SizeItem {
             label: "foreign_account_slot_names".into(),
             bytes: foreign_slot_names_size,
         },
@@ -118,12 +113,7 @@ fn render_tx_inputs_stats(tx_inputs: &TransactionInputs, file_size: usize, top: 
     render_input_notes_stats(tx_inputs, input_notes_size, top);
     render_tx_args_stats(tx_inputs, tx_args_size);
     render_advice_stats(tx_inputs, advice_inputs_size, top);
-    render_foreign_data_stats(
-        tx_inputs,
-        foreign_account_code_size,
-        asset_witnesses_size,
-        top,
-    );
+    render_foreign_data_stats(tx_inputs, foreign_account_code_size, top);
 }
 
 fn render_account_stats(tx_inputs: &TransactionInputs, account_size: usize) {
@@ -170,7 +160,7 @@ fn render_account_stats(tx_inputs: &TransactionInputs, account_size: usize) {
     println!("- nonce: {}", account.nonce());
     println!("- is new: {}", yes_no(account.is_new()));
     println!("- has public state: {}", yes_no(account.has_public_state()));
-    println!("- account commitment: {}", account.commitment());
+    println!("- account commitment: {}", account.to_commitment());
     println!("- initial commitment: {}", account.initial_commitment());
     println!("- code commitment: {}", account.code().commitment());
     println!("- code procedures: {}", account.code().num_procedures());
@@ -295,7 +285,7 @@ fn render_input_notes_stats(tx_inputs: &TransactionInputs, input_notes_size: usi
             None => 0,
         };
         let note_script_bytes = serialized_len(note.script());
-        let note_inputs_bytes = serialized_len(note.inputs());
+        let note_inputs_bytes = serialized_len(note.storage());
         let note_assets_bytes = serialized_len(note.assets());
 
         total_note_payload_size += note_payload_bytes;
@@ -305,7 +295,7 @@ fn render_input_notes_stats(tx_inputs: &TransactionInputs, input_notes_size: usi
         total_note_assets_size += note_assets_bytes;
 
         total_note_assets += note.assets().num_assets();
-        total_note_inputs += usize::from(note.inputs().num_values());
+        total_note_inputs += usize::from(note.storage().num_items());
         total_fungible_assets += note.assets().iter_fungible().count();
         total_non_fungible_assets += note.assets().iter_non_fungible().count();
 
@@ -313,7 +303,7 @@ fn render_input_notes_stats(tx_inputs: &TransactionInputs, input_notes_size: usi
             label: format!(
                 "[{idx}] {} ({kind}, inputs={}, assets={})",
                 note.id(),
-                note.inputs().num_values(),
+                note.storage().num_items(),
                 note.assets().num_assets()
             ),
             bytes: input_note_bytes,
@@ -466,7 +456,6 @@ fn render_advice_stats(tx_inputs: &TransactionInputs, advice_inputs_size: usize,
 fn render_foreign_data_stats(
     tx_inputs: &TransactionInputs,
     foreign_account_code_size: usize,
-    asset_witnesses_size: usize,
     top: usize,
 ) {
     let mut largest_foreign_codes: Vec<SizeItem> = tx_inputs
@@ -480,16 +469,6 @@ fn render_foreign_data_stats(
                 code.num_procedures()
             ),
             bytes: serialized_len(code),
-        })
-        .collect();
-
-    let mut largest_asset_witnesses: Vec<SizeItem> = tx_inputs
-        .asset_witnesses()
-        .iter()
-        .enumerate()
-        .map(|(idx, witness)| SizeItem {
-            label: format!("[{idx}]"),
-            bytes: serialized_len(witness),
         })
         .collect();
 
@@ -510,11 +489,6 @@ fn render_foreign_data_stats(
         bytes_with_unit(foreign_account_code_size)
     );
     println!(
-        "- asset witnesses count: {} ({})",
-        tx_inputs.asset_witnesses().len(),
-        bytes_with_unit(asset_witnesses_size)
-    );
-    println!(
         "- foreign account slot names: {} ({})",
         tx_inputs.foreign_account_slot_names().len(),
         bytes_with_unit(serialized_len(tx_inputs.foreign_account_slot_names()))
@@ -524,12 +498,6 @@ fn render_foreign_data_stats(
         "Largest foreign account code entries",
         &mut largest_foreign_codes,
         foreign_account_code_size,
-        top,
-    );
-    render_ranked_sizes(
-        "Largest asset witnesses",
-        &mut largest_asset_witnesses,
-        asset_witnesses_size,
         top,
     );
     render_ranked_sizes(

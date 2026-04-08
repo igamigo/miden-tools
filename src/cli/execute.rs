@@ -18,6 +18,7 @@ impl Cli {
         match self.command {
             Command::Inspect {
                 file_path,
+                verbose,
                 validate,
                 network,
                 endpoint,
@@ -27,7 +28,7 @@ impl Cli {
                 } else {
                     None
                 };
-                rpc::inspect::inspect(file_path, endpoint)
+                rpc::inspect::inspect(file_path, endpoint, verbose)
             }
             Command::Rpc { command } => execute_rpc(command),
             Command::Store { command } => execute_store(command),

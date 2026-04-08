@@ -2,9 +2,8 @@ use std::sync::Arc;
 
 use anyhow::{Result, anyhow};
 use miden_client::{
-    Client, ExecutionOptions, Felt,
+    Client, ExecutionOptions,
     account::AccountId,
-    crypto::RpoRandomCoin,
     keystore::FilesystemKeyStore,
     note::NoteId,
     notes::NoteFile,
@@ -161,34 +160,15 @@ pub(crate) fn debug_ntx(
                 .map_err(|e| anyhow!("failed to create temp store: {e}"))?,
         );
 
-        let coin_seed: [u64; 4] = [42, 0, 0, 0];
-        let rng: miden_client::ClientRngBox =
-            Box::new(RpoRandomCoin::new(coin_seed.map(Felt::new).into()));
-
         let rpc_client: Arc<dyn NodeRpcClient> =
             Arc::new(GrpcClient::new(&endpoint, DEFAULT_TIMEOUT_MS));
 
-        let exec_options = ExecutionOptions::new(
-            Some(miden_client::MAX_TX_EXECUTION_CYCLES),
-            miden_client::MIN_TX_EXECUTION_CYCLES,
-            false,
-            false,
-        )
-        .map_err(|e| anyhow!("invalid execution options: {e}"))?;
-
-        let mut client: Client<FilesystemKeyStore> = Client::new(
-            rpc_client,
-            rng,
-            store.clone(),
-            None,
-            exec_options,
-            None,
-            None,
-            None,
-            None,
-        )
-        .await
-        .map_err(|e| anyhow!("failed to create client: {e}"))?;
+        let mut client: Client<FilesystemKeyStore> = Client::builder()
+            .rpc(rpc_client)
+            .store(store.clone())
+            .build()
+            .await
+            .map_err(|e| anyhow!("failed to create client: {e}"))?;
 
         // ── 3. Sync ─────────────────────────────────────────────────────
         let sync = client
@@ -245,7 +225,7 @@ pub(crate) fn debug_ntx(
         }
 
         let executor: TransactionExecutor<'_, '_, _, ()> = TransactionExecutor::new(&data_store)
-            .with_options(exec_options)
+            .with_options(ExecutionOptions::default())
             .map_err(|e| anyhow!("failed to create executor: {e}"))?;
         let checker = NoteConsumptionChecker::new(&executor);
 

@@ -12,9 +12,7 @@ static CONFIG: std::sync::OnceLock<Option<CliConfig>> = std::sync::OnceLock::new
 /// Load the CLI config from the system (local .miden/ first, then global ~/.miden/).
 /// Returns None if no config file is found.
 fn get_config() -> Option<&'static CliConfig> {
-    CONFIG
-        .get_or_init(|| CliConfig::from_system().ok())
-        .as_ref()
+    CONFIG.get_or_init(|| CliConfig::load().ok()).as_ref()
 }
 
 /// Get the store path from config, or None if not configured.

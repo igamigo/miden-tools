@@ -11,7 +11,7 @@ mod execute;
 #[command(
     name = "distaff",
     about = "Lightweight helpers around miden-client",
-    version = concat!(env!("CARGO_PKG_VERSION"), " (", env!("GIT_HASH"), ")")
+    version = concat!(env!("CARGO_PKG_VERSION"), " (", env!("GIT_HASH"), ") [miden-client ", env!("MIDEN_CLIENT_VERSION"), "]")
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -24,6 +24,9 @@ pub enum Command {
     Inspect {
         /// Path to a serialized `NoteFile` or `AccountFile`
         file_path: PathBuf,
+        /// Print extended details (storage slots, vault, etc.)
+        #[arg(long, short, default_value_t = false)]
+        verbose: bool,
         /// Validate the note against a node (fetch inclusion info, nullifier status)
         #[arg(long, default_value_t = false)]
         validate: bool,
@@ -307,7 +310,6 @@ pub enum Network {
 pub enum NoteTypeFilter {
     Public,
     Private,
-    Encrypted,
 }
 
 impl NoteTypeFilter {
@@ -315,7 +317,6 @@ impl NoteTypeFilter {
         match self {
             NoteTypeFilter::Public => NoteType::Public,
             NoteTypeFilter::Private => NoteType::Private,
-            NoteTypeFilter::Encrypted => NoteType::Encrypted,
         }
     }
 }

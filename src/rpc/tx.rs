@@ -5,7 +5,7 @@ use miden_client::note::{NoteId, Nullifier};
 use miden_client::store::{
     InputNoteRecord, NoteFilter, OutputNoteRecord, Store, TransactionFilter,
 };
-use miden_client::transaction::{OutputNote, TransactionRecord};
+use miden_client::transaction::TransactionRecord;
 use miden_client_sqlite_store::SqliteStore;
 use tokio::runtime::Runtime;
 
@@ -115,9 +115,8 @@ fn render_transaction(tx: &TransactionRecord, verbose: bool, notes: Option<&Tran
             println!("- output notes:");
             for (idx, note) in details.output_notes.iter().enumerate() {
                 let kind = match note {
-                    OutputNote::Full(_) => "full",
-                    OutputNote::Partial(_) => "partial",
-                    OutputNote::Header(_) => "header",
+                    miden_protocol::transaction::RawOutputNote::Full(_) => "full",
+                    miden_protocol::transaction::RawOutputNote::Partial(_) => "partial",
                 };
                 println!("  [{idx}] {} ({kind})", note.id());
                 if let Some(recipient) = note.recipient() {
@@ -129,7 +128,7 @@ fn render_transaction(tx: &TransactionRecord, verbose: bool, notes: Option<&Tran
                     println!("    script root: {script_label}");
                     render_well_known_inputs(
                         &script_root,
-                        recipient.inputs().values(),
+                        recipient.storage().items(),
                         "    ",
                         "      ",
                     );

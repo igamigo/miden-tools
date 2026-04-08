@@ -77,7 +77,7 @@ pub(crate) fn render_input_note(note: &miden_client::store::InputNoteRecord) {
     }
     render_assets(details.assets());
     println!("- script root: {script_label}");
-    render_well_known_inputs(&script_root, details.inputs().values(), "- ", "  ");
+    render_well_known_inputs(&script_root, details.storage().items(), "- ", "  ");
     if let Some(created_at) = note.created_at() {
         println!("- created at: {created_at}");
     }
@@ -85,7 +85,7 @@ pub(crate) fn render_input_note(note: &miden_client::store::InputNoteRecord) {
         println!(
             "- inclusion: block {} index {}",
             proof.location().block_num().as_u32(),
-            proof.location().node_index_in_block()
+            proof.location().block_note_tree_index()
         );
     }
 }
@@ -105,7 +105,7 @@ pub(crate) fn render_output_note(note: &miden_client::store::OutputNoteRecord) {
         println!(
             "- inclusion: block {} index {}",
             proof.location().block_num().as_u32(),
-            proof.location().node_index_in_block()
+            proof.location().block_note_tree_index()
         );
     }
     render_assets(note.assets());
@@ -117,7 +117,7 @@ pub(crate) fn render_output_note(note: &miden_client::store::OutputNoteRecord) {
             None => script_root.to_string(),
         };
         println!("- script root: {script_label}");
-        render_well_known_inputs(&script_root, recipient.inputs().values(), "- ", "  ");
+        render_well_known_inputs(&script_root, recipient.storage().items(), "- ", "  ");
     } else {
         println!("- recipient: n/a");
     }

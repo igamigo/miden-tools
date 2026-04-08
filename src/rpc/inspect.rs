@@ -70,7 +70,7 @@ pub(crate) fn inspect_note(
 }
 
 /// Inspect a serialized note or account file and optionally validate note data against a node.
-pub(crate) fn inspect(file_path: PathBuf, endpoint: Option<Endpoint>) -> Result<()> {
+pub(crate) fn inspect(file_path: PathBuf, endpoint: Option<Endpoint>, verbose: bool) -> Result<()> {
     let bytes =
         fs::read(&file_path).with_context(|| format!("failed to read {}", file_path.display()))?;
 
@@ -87,7 +87,7 @@ pub(crate) fn inspect(file_path: PathBuf, endpoint: Option<Endpoint>) -> Result<
     match AccountFile::read_from_bytes(&bytes) {
         Ok(account_file) => {
             println!("Inspecting {} as AccountFile", file_path.display());
-            render_account_file(&account_file);
+            render_account_file(&account_file, verbose);
             if let Some(endpoint) = endpoint {
                 run_account_validation(&account_file, endpoint)?;
             }
@@ -113,7 +113,7 @@ fn render_note_file(note_file: &NoteFile) {
         } => {
             let script_root = details.script().root();
             let note_id = details.id();
-            let inputs = details.inputs().values();
+            let inputs = details.storage().items();
 
             let script_label = match well_known_label_from_root(&script_root) {
                 Some(label) => format!("{script_root} ({label})"),
@@ -149,26 +149,59 @@ fn render_note_file(note_file: &NoteFile) {
             render_assets(note.assets());
             println!("- script root: {script_label}");
             println!("- created in block: {}", location.block_num().as_u32());
-            println!("- node index in block: {}", location.node_index_in_block());
-            render_well_known_inputs(&script_root, note.inputs().values(), "- ", "  ");
+            println!(
+                "- node index in block: {}",
+                location.block_note_tree_index()
+            );
+            render_well_known_inputs(&script_root, note.storage().items(), "- ", "  ");
         }
     }
 }
 
-fn render_account_file(account_file: &AccountFile) {
+fn render_account_file(account_file: &AccountFile, verbose: bool) {
     let auth_keys = account_file.auth_secret_keys.len();
     let account = &account_file.account;
-    let storage_slots = account.storage().slots().len();
+    let slots = account.storage().slots();
 
     println!("- account id: {}", account.id());
     println!("- account type: {:?}", account.account_type());
     println!("- nonce: {}", account.nonce());
-    println!("- storage slots: {storage_slots}");
+    println!("- storage slots: {}", slots.len());
     println!("- auth keys: {auth_keys}");
     println!(
         "- is public: {}",
         if account.is_public() { "yes" } else { "no" }
     );
+
+    if verbose {
+        use miden_protocol::account::StorageSlotContent;
+
+        println!();
+        println!("Storage slots:");
+        for (idx, slot) in slots.iter().enumerate() {
+            let name = slot.name();
+            match slot.content() {
+                StorageSlotContent::Value(word) => {
+                    println!("  [{idx}] \"{name}\" (Value)");
+                    println!("       {}", word.to_hex());
+                }
+                StorageSlotContent::Map(map) => {
+                    let entry_count = map.entries().count();
+                    println!(
+                        "  [{idx}] \"{name}\" (Map, root={}, entries={})",
+                        map.root().to_hex(),
+                        entry_count
+                    );
+                    for (key, value) in map.entries() {
+                        println!("       {} -> {}", key, value.to_hex());
+                    }
+                }
+            }
+        }
+
+        println!();
+        crate::render::account::render_account(account, true);
+    }
 }
 
 fn run_note_validation(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
@@ -194,7 +227,7 @@ async fn validate_account(account_file: &AccountFile, endpoint: Endpoint) -> Res
     match rpc.get_account_details(account_id).await {
         Ok(fetched) => {
             let on_chain_commitment = fetched.commitment();
-            let local_commitment = local_header.commitment();
+            let local_commitment = local_header.to_commitment();
 
             match fetched {
                 miden_client::rpc::domain::account::FetchedAccount::Public(
@@ -220,8 +253,8 @@ async fn validate_account(account_file: &AccountFile, endpoint: Endpoint) -> Res
                     // Nonce comparison (staleness detection)
                     let local_nonce = local_header.nonce();
                     let on_chain_nonce = on_chain_header.nonce();
-                    let local_nonce_val = local_nonce.inner();
-                    let on_chain_nonce_val = on_chain_nonce.inner();
+                    let local_nonce_val = local_nonce.as_canonical_u64();
+                    let on_chain_nonce_val = on_chain_nonce.as_canonical_u64();
                     if local_nonce_val == on_chain_nonce_val {
                         println!("- nonce: {} (in sync)", local_nonce);
                     } else if on_chain_nonce_val > local_nonce_val {
@@ -319,23 +352,37 @@ async fn validate_note(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
                 loop {
                     match rpc.sync_notes(cursor, None, &tags).await {
                         Ok(info) => {
-                            if let Some(committed) =
-                                info.notes.iter().find(|note| note.note_id() == &note_id)
-                            {
-                                let header =
-                                    NoteHeader::new(*committed.note_id(), committed.metadata());
-                                verify_inclusion_with_root(
-                                    header.commitment(),
-                                    committed.note_index(),
-                                    committed.inclusion_path(),
-                                    info.block_header.note_root(),
-                                    "sync",
-                                )?;
+                            let mut found = false;
+                            for block in &info.blocks {
+                                if let Some(committed) = block.notes.get(&note_id) {
+                                    let proof = committed.inclusion_proof();
+                                    let location = proof.location();
+                                    let header = match committed.metadata() {
+                                        Some(m) => NoteHeader::new(note_id, m.clone()),
+                                        None => {
+                                            println!(
+                                                "- note {note_id} found but metadata incomplete"
+                                            );
+                                            found = true;
+                                            break;
+                                        }
+                                    };
+                                    verify_inclusion_with_root(
+                                        header.to_commitment(),
+                                        location.block_note_tree_index(),
+                                        proof.note_path(),
+                                        block.block_header.note_root(),
+                                        "sync",
+                                    )?;
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if found {
                                 break;
                             }
 
-                            let block_num = info.block_header.block_num();
-                            if block_num == info.chain_tip {
+                            if info.block_to == info.chain_tip {
                                 println!(
                                     "- note {note_id} not found (chain tip {})",
                                     info.chain_tip.as_u32()
@@ -343,7 +390,7 @@ async fn validate_note(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
                                 break;
                             }
 
-                            cursor = block_num;
+                            cursor = info.block_to;
                         }
                         Err(err) => {
                             println!("- failed to sync notes by tag: {err}");
@@ -367,7 +414,7 @@ async fn validate_note(note_file: &NoteFile, endpoint: Endpoint) -> Result<()> {
                             let header = NoteHeader::new(fetched.id(), fetched.metadata().clone());
                             verify_inclusion_with_header(
                                 &rpc,
-                                header.commitment(),
+                                header.to_commitment(),
                                 fetched.inclusion_proof(),
                                 "node",
                             )
@@ -433,7 +480,7 @@ async fn verify_inclusion_with_header(
         Ok((header, _)) => {
             verify_inclusion_with_root(
                 note_commitment,
-                proof.location().node_index_in_block(),
+                proof.location().block_note_tree_index(),
                 proof.note_path(),
                 header.note_root(),
                 label,
@@ -472,7 +519,10 @@ fn render_fetched_note(fetched: &miden_client::rpc::domain::note::FetchedNote) {
     println!("- type: {:?}", metadata.note_type());
     println!("- tag: {}", format_note_tag(metadata.tag()));
     println!("- included in block: {}", inclusion.block_num().as_u32());
-    println!("- node index in block: {}", inclusion.node_index_in_block());
+    println!(
+        "- node index in block: {}",
+        inclusion.block_note_tree_index()
+    );
 
     match fetched {
         miden_client::rpc::domain::note::FetchedNote::Public(note, _) => {
@@ -483,7 +533,7 @@ fn render_fetched_note(fetched: &miden_client::rpc::domain::note::FetchedNote) {
                 None => script_root.to_string(),
             };
             println!("- script root: {script_label}");
-            render_well_known_inputs(&script_root, note.inputs().values(), "- ", "  ");
+            render_well_known_inputs(&script_root, note.storage().items(), "- ", "  ");
             render_attachment(metadata.attachment(), "- ");
         }
         miden_client::rpc::domain::note::FetchedNote::Private(..) => {

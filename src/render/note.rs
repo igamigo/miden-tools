@@ -1,23 +1,15 @@
 use miden_client::{
     Felt, Word,
     account::AccountId,
-    asset::Asset,
-    note::{NoteAssets, NoteAttachment, NoteExecutionHint, NoteTag, NoteType, WellKnownNote},
+    note::{NoteAssets, NoteAttachment, NoteExecutionHint, NoteTag, NoteType},
 };
 use miden_protocol::block::BlockNumber;
-use miden_standards::note::NetworkAccountTarget;
+use miden_standards::note::{NetworkAccountTarget, StandardNote};
 
 use super::asset::format_asset;
 
 pub(crate) fn well_known_label_from_root(script_root: &Word) -> Option<&'static str> {
-    match *script_root {
-        root if root == WellKnownNote::P2ID.script_root() => Some("P2ID"),
-        root if root == WellKnownNote::P2IDE.script_root() => Some("P2IDE"),
-        root if root == WellKnownNote::SWAP.script_root() => Some("SWAP"),
-        root if root == WellKnownNote::MINT.script_root() => Some("MINT"),
-        root if root == WellKnownNote::BURN.script_root() => Some("BURN"),
-        _ => None,
-    }
+    StandardNote::from_script_root(*script_root).map(|s| s.name())
 }
 
 pub(crate) fn format_note_tag(tag: NoteTag) -> String {
@@ -102,7 +94,7 @@ fn decode_swap(inputs: &[Felt]) -> Vec<String> {
     let execution_hint = format_execution_hint(inputs[8]);
     let note_type = format_note_type(inputs[9]);
     let note_aux = format_felt(inputs[10]);
-    let note_tag = format_note_tag(NoteTag::from(inputs[11].as_int() as u32));
+    let note_tag = format_note_tag(NoteTag::from(inputs[11].as_canonical_u64() as u32));
     let payback_attachment_scheme = format_felt(inputs[12]);
     let payback_attachment_content = word_from_slice(inputs, 13)
         .map(|w| w.to_hex())
@@ -135,7 +127,7 @@ fn decode_mint(inputs: &[Felt]) -> Vec<String> {
     let execution_hint = format_execution_hint(inputs[4]);
     let note_type = format_note_type(inputs[5]);
     let note_aux = format_felt(inputs[6]);
-    let note_tag = format_note_tag(NoteTag::from(inputs[7].as_int() as u32));
+    let note_tag = format_note_tag(NoteTag::from(inputs[7].as_canonical_u64() as u32));
 
     let mut result = vec![
         format!("target recipient: {}", target_recipient.to_hex()),
@@ -182,8 +174,7 @@ fn decode_burn(inputs: &[Felt]) -> Vec<String> {
 }
 
 fn account_id_from_inputs(prefix: Felt, suffix: Felt) -> String {
-    let account_inputs = [prefix, suffix];
-    AccountId::try_from(account_inputs)
+    AccountId::try_from_elements(suffix, prefix)
         .map(|account| account.to_string())
         .unwrap_or_else(|_| "invalid".to_string())
 }
@@ -194,7 +185,7 @@ fn word_from_slice(inputs: &[Felt], start: usize) -> Option<Word> {
 }
 
 fn format_optional_block_height(value: Felt) -> String {
-    let raw = value.as_int();
+    let raw = value.as_canonical_u64();
     if raw == 0 {
         "none".to_string()
     } else if raw <= u32::MAX as u64 {
@@ -205,37 +196,29 @@ fn format_optional_block_height(value: Felt) -> String {
 }
 
 fn format_execution_hint(value: Felt) -> String {
-    match NoteExecutionHint::try_from(value.as_int()) {
+    match NoteExecutionHint::try_from(value.as_canonical_u64()) {
         Ok(hint) => format!("{hint:?}"),
-        Err(_) => format!("unknown ({})", value.as_int()),
+        Err(_) => format!("unknown ({})", value.as_canonical_u64()),
     }
 }
 
 fn format_note_type(value: Felt) -> String {
     match NoteType::try_from(value) {
         Ok(note_type) => format!("{note_type:?}"),
-        Err(_) => format!("unknown ({})", value.as_int()),
+        Err(_) => format!("unknown ({})", value.as_canonical_u64()),
     }
 }
 
 fn format_felt(value: Felt) -> String {
-    format!("{} (0x{:x})", value.as_int(), value.as_int())
+    format!(
+        "{} (0x{:x})",
+        value.as_canonical_u64(),
+        value.as_canonical_u64()
+    )
 }
 
 fn format_asset_from_word(word: Word) -> String {
-    match Asset::try_from(word) {
-        Ok(asset) => match asset {
-            Asset::Fungible(f) => {
-                format!("fungible amount={} faucet={}", f.amount(), f.faucet_id())
-            }
-            Asset::NonFungible(nf) => format!(
-                "non-fungible faucet-prefix={} value={:?}",
-                nf.faucet_id_prefix(),
-                nf
-            ),
-        },
-        Err(_) => format!("unknown asset ({})", word.to_hex()),
-    }
+    format!("asset word ({})", word.to_hex())
 }
 
 /// Render a note attachment, decoding well-known schemes like [`NetworkAccountTarget`].

@@ -11,7 +11,8 @@ use miden_client::{
 use miden_protocol::{
     MastForest, Word, ZERO,
     account::{
-        Account, AccountId, PartialAccount, StorageMapWitness, StorageSlot, StorageSlotContent,
+        Account, AccountId, PartialAccount, StorageMapKey, StorageMapWitness, StorageSlot,
+        StorageSlotContent,
     },
     asset::{AssetVaultKey, AssetWitness},
     block::{BlockHeader, BlockNumber},
@@ -114,7 +115,6 @@ impl DataStore for NtxDataStore {
         ref_block: BlockNumber,
     ) -> Result<AccountInputs, DataStoreError> {
         use miden_client::rpc::AccountStateAt;
-        use miden_client::transaction::ForeignAccount;
 
         // Fetch the full account via get_account_details.
         let fetched = self
@@ -143,20 +143,24 @@ impl DataStore for NtxDataStore {
         // request details), so we build from the full account instead. Fixed in v0.14.0-beta.
         let partial = PartialAccount::from(account.as_ref());
 
-        // Fetch the proof separately. If it fails (e.g. due to the is_public bug), fall back
-        // to an empty witness — the consumption checker doesn't validate proofs.
-        // TODO: ForeignAccount::public() rejects Network-mode accounts. Fixed in v0.14.0-beta.
+        // Fetch the proof separately. If it fails, fall back to an empty witness — the
+        // consumption checker doesn't validate proofs.
         let witness = {
-            let foreign = ForeignAccount::Public(foreign_account_id, Default::default());
             match self
                 .rpc
-                .get_account(foreign, AccountStateAt::Block(ref_block), None)
+                .get_account_proof(
+                    foreign_account_id,
+                    Default::default(),
+                    AccountStateAt::Block(ref_block),
+                    None,
+                    None,
+                )
                 .await
             {
                 Ok((_, proof)) => proof.into_parts().0,
                 Err(_) => miden_protocol::block::account_tree::AccountWitness::new(
                     foreign_account_id,
-                    account.commitment(),
+                    account.to_commitment(),
                     Default::default(),
                 )
                 .map_err(|e| DataStoreError::other(format!("{e}")))?,
@@ -201,7 +205,7 @@ impl DataStore for NtxDataStore {
         &self,
         account_id: AccountId,
         map_root: Word,
-        _map_key: Word,
+        map_key: StorageMapKey,
     ) -> Result<StorageMapWitness, DataStoreError> {
         let storage = self
             .store
@@ -209,7 +213,7 @@ impl DataStore for NtxDataStore {
             .await?;
 
         match storage.slots().first().map(StorageSlot::content) {
-            Some(StorageSlotContent::Map(map)) => Ok(map.open(&_map_key)),
+            Some(StorageSlotContent::Map(map)) => Ok(map.open(&map_key)),
             _ => Err(DataStoreError::other(format!(
                 "storage map with root {map_root} not found for {account_id}"
             ))),

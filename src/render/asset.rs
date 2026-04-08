@@ -6,7 +6,7 @@ pub(crate) fn format_asset(asset: &Asset) -> String {
         Asset::NonFungible(nf) => {
             format!(
                 "non-fungible faucet-prefix={} value={:?}",
-                nf.faucet_id_prefix(),
+                nf.faucet_id(),
                 nf
             )
         }

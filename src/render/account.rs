@@ -9,7 +9,7 @@ pub(crate) fn render_account(account: &Account, include_vault: bool) {
     println!("- vault commitment: {}", header.vault_root());
     println!("- storage commitment: {}", header.storage_commitment());
     println!("- code commitment: {}", header.code_commitment());
-    println!("- header commitment: {}", header.commitment());
+    println!("- header commitment: {}", header.to_commitment());
 
     if include_vault {
         println!("- storage slots: {}", account.storage().slots().len());
