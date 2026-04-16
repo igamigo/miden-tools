@@ -1,10 +1,15 @@
 mod cli;
 mod errors;
-mod utils;
+mod package_wrapper;
 
 use clap::Parser;
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     let cli = cli::Cli::parse();
-    println!("File: {}", cli.file.display());
+    let options = cli::Options {
+        verbose: cli.verbose,
+    };
+    let package = package_wrapper::PackageWrapper::from_file(&cli.file, &options)?;
+    println!("Package version: {}", package.version);
+    Ok(())
 }

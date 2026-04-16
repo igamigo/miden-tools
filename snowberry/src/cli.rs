@@ -11,3 +11,7 @@ pub struct Cli {
     #[arg(short, long)]
     pub verbose: bool,
 }
+
+pub struct Options {
+    pub verbose: bool,
+}

@@ -3,4 +3,5 @@ members = ["teasel", "snowberry"]
 resolver = "3"
 
 [workspace.dependencies]
+anyhow = { version = "1.0" }
 clap = { version = "4.5", features = ["derive"] }

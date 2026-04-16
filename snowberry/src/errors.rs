@@ -1,14 +1,14 @@
-use std::fmt;
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum SnowberryError {
-    NotAPackage,
-}
-
-impl fmt::Display for SnowberryError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SnowberryError::NotAPackage => write!(f, "file is not a valid package"),
-        }
-    }
+    #[error("failed to read magic bytes: only read {found} of 5 bytes")]
+    WrongMagic { found: usize },
+    #[error("not a valid package: expected magic bytes MASP\\0, found {found:02x?}")]
+    NotAPackage { found: [u8; 5] },
+    #[error("unsupported package version: {version} (max supported: {max_supported})")]
+    UnsupportedVersion {
+        version: semver::Version,
+        max_supported: semver::Version,
+    },
 }
