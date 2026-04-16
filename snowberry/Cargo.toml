@@ -1,0 +1,11 @@
+[package]
+name = "snowberry"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+miden-mast-package-v13 = { package = "miden-mast-package", version = "0.13.0" }
+miden-mast-package-v17 = { package = "miden-mast-package", version = "0.17.0" }
+miden-mast-package-v18 = { package = "miden-mast-package", version = "0.18.0" }
+miden-mast-package-v20 = { package = "miden-mast-package", version = "0.20.0" }
+miden-mast-package-v22 = { package = "miden-mast-package", version = "0.22.1" }
