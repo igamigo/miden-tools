@@ -4406,11 +4406,13 @@ checksum = "b7c388c1b5e93756d0c740965c41e8822f866621d41acbdf6336a6a168f8840c"
 name = "snowberry"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "miden-mast-package 0.13.2",
  "miden-mast-package 0.17.2",
  "miden-mast-package 0.18.3",
  "miden-mast-package 0.20.6",
  "miden-mast-package 0.22.1",
+ "semver 1.0.27",
 ]
 
 [[package]]
