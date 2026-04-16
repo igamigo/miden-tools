@@ -10,6 +10,7 @@ fn main() -> anyhow::Result<()> {
         verbose: cli.verbose,
     };
     let package = package_wrapper::PackageWrapper::from_file(&cli.file, &options)?;
-    println!("Package version: {}", package.version);
+    let fields = package.info()?;
+    cli::display_fields(&fields);
     Ok(())
 }

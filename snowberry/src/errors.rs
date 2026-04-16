@@ -11,4 +11,6 @@ pub enum SnowberryError {
         version: semver::Version,
         max_supported: semver::Version,
     },
+    #[error("failed to deserialize package: {reason}")]
+    DeserializationFailed { reason: String },
 }

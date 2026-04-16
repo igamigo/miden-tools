@@ -1999,6 +1999,7 @@ dependencies = [
  "miden-miette",
  "num-derive",
  "num-traits",
+ "parking_lot",
  "thiserror 2.0.18",
  "winter-math 0.12.0",
  "winter-utils 0.12.0",
@@ -2104,6 +2105,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6dd5fee625e5024c1e47c2914ae2f9bcf36055afe47a680314b4613709bdbdf4"
 dependencies = [
  "blake3",
+ "cc",
  "glob",
  "num",
  "num-complex",
@@ -2123,6 +2125,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4329275a11c7d8328b14a7129b21d40183056dcd0d871c3069be6e550d6ca40"
 dependencies = [
  "blake3",
+ "cc",
  "glob",
  "num",
  "num-complex",
@@ -2272,6 +2275,8 @@ dependencies = [
  "miden-miette",
  "miden-utils-sync 0.17.2",
  "paste",
+ "serde",
+ "serde_spanned 1.1.0",
  "thiserror 2.0.18",
 ]
 
@@ -2759,6 +2764,7 @@ checksum = "bb026e69ae937b2a83bf69ea86577e0ec2450cb22cce163190b9fd42f2972b63"
 dependencies = [
  "lock_api",
  "loom",
+ "parking_lot",
 ]
 
 [[package]]
@@ -4408,6 +4414,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "miden-core 0.13.2",
+ "miden-core 0.17.2",
+ "miden-core 0.18.3",
+ "miden-core 0.20.6",
+ "miden-core 0.22.1",
  "miden-mast-package 0.13.2",
  "miden-mast-package 0.17.2",
  "miden-mast-package 0.18.3",
