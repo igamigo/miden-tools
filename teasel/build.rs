@@ -33,7 +33,7 @@ fn main() {
     };
 
     // Get miden-client version from Cargo.lock
-    let miden_client_version = std::fs::read_to_string("Cargo.lock")
+    let miden_client_version = std::fs::read_to_string("../Cargo.lock")
         .ok()
         .and_then(|lock| {
             lock.split("\n[[package]]")
