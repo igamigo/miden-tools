@@ -1,32 +1,3 @@
-[package]
-name = "teasel"
-version = "0.14.0"
-edition = "2024"
-description = "Lightweight CLI utilities for inspecting Miden files, local stores, and RPC endpoints"
-authors = ["Ignacio Amigo", "miden contributors"]
-license = "MIT"
-repository = "https://github.com/igamigo/miden-tools"
-readme = "README.md"
-keywords = ["miden", "blockchain", "cli", "debug"]
-categories = ["command-line-utilities", "cryptography::cryptocurrencies"]
-rust-version = "1.91"
-
-[[bin]]
-name = "teasel"
-path = "src/main.rs"
-
-[dependencies]
-anyhow = { version = "1.0" }
-clap = { features = ["derive"], version = "4.5" }
-crossterm = { version = "0.27" }
-dirs = { version = "6" }
-miden-client = { version = "0.14", features = ["tonic"] }
-miden-client-cli = { version = "0.14" }
-miden-client-sqlite-store = { version = "0.14" }
-miden-crypto = { version = "0.23" }
-miden-protocol = { version = "0.14" }
-miden-standards = { version = "0.14" }
-miden-tx = { version = "0.14" }
-ratatui = { version = "0.27" }
-rusqlite = { features = ["bundled"], version = "0.37" }
-tokio = { features = ["rt-multi-thread"], version = "1.48" }
+[workspace]
+members = ["teasel"]
+resolver = "3"
