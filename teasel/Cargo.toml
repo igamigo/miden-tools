@@ -16,8 +16,8 @@ name = "teasel"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = { version = "1.0" }
-clap = { features = ["derive"], version = "4.5" }
+anyhow = { workspace = true }
+clap = { workspace = true }
 crossterm = { version = "0.27" }
 dirs = { version = "6" }
 miden-client = { version = "0.14", features = ["tonic"] }

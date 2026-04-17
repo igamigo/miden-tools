@@ -1,0 +1,29 @@
+[package]
+name = "snowberry"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true }
+semver = { version = "1.0" }
+thiserror = { version = "2.0" }
+
+# Miden dependencies
+# miden-core-* contains the Deserializable trait
+# miden-mast-package-* contains the actual Package struct
+# [0, 0, 0]
+miden-core-v13 = { package = "miden-core", version = "0.13" }
+miden-mast-package-v13 = { package = "miden-mast-package", version = "0.13.0" }
+# [1, 0, 0]
+miden-core-v17 = { package = "miden-core", version = "0.17" }
+miden-mast-package-v17 = { package = "miden-mast-package", version = "0.17.0" }
+# [2, 0, 0]
+miden-core-v18 = { package = "miden-core", version = "0.18" }
+miden-mast-package-v18 = { package = "miden-mast-package", version = "0.18.0" }
+# [3, 0, 0]
+miden-core-v20 = { package = "miden-core", version = "0.20" }
+miden-mast-package-v20 = { package = "miden-mast-package", version = "0.20.0" }
+# [4, 0, 0]
+miden-core-v22 = { package = "miden-core", version = "0.22" }
+miden-mast-package-v22 = { package = "miden-mast-package", version = "0.22.1" }
