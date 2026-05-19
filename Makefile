@@ -33,6 +33,10 @@ typos: ## Check for typos
 test: ## Run all tests
 	cargo test
 
-.PHONY: install
-install: ## Install the CLI locally
-	cargo install --path . --locked
+.PHONY: install-teasel
+install-teasel: ## Install the teasel CLI locally
+	cargo install --path teasel --locked
+
+.PHONY: install-snowberry
+install-snowberry: ## Install the snowberry CLI locally
+	cargo install --path snowberry --locked
