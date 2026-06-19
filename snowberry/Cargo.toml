@@ -2,6 +2,13 @@
 name = "snowberry"
 version = "0.1.0"
 edition = "2024"
+authors = ["lima-limon-inc"]
+description = "CLI tool for inspecting Miden MASP package files across multiple miden-mast-package versions"
+license = "MIT"
+repository = "https://github.com/igamigo/miden-tools"
+readme = "README.md"
+keywords = ["miden", "blockchain", "cli", "masp"]
+categories = ["command-line-utilities", "cryptography::cryptocurrencies"]
 
 [dependencies]
 anyhow = { workspace = true }
