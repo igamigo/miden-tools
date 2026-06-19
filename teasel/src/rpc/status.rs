@@ -32,7 +32,7 @@ pub(crate) fn rpc_status(endpoint: Endpoint) -> Result<()> {
                 println!("- chain commitment: {}", header.chain_commitment());
                 println!("- timestamp: {}", header.timestamp());
                 let fee_params = header.fee_parameters();
-                println!("- native asset faucet: {}", fee_params.native_asset_id());
+                println!("- native asset faucet: {}", fee_params.fee_faucet_id());
                 println!(
                     "- verification base fee: {}",
                     fee_params.verification_base_fee()
@@ -69,7 +69,7 @@ pub(crate) fn rpc_block(endpoint: Endpoint, block_num: BlockNumber) -> Result<()
                 println!("- tx commitment: {}", header.tx_commitment());
                 println!("- tx kernel commitment: {}", header.tx_kernel_commitment());
                 let fee_params = header.fee_parameters();
-                println!("- native asset faucet: {}", fee_params.native_asset_id());
+                println!("- native asset faucet: {}", fee_params.fee_faucet_id());
                 println!(
                     "- verification base fee: {}",
                     fee_params.verification_base_fee()

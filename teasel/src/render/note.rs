@@ -1,15 +1,15 @@
 use miden_client::{
     Felt, Word,
     account::AccountId,
-    note::{NoteAssets, NoteAttachment, NoteExecutionHint, NoteTag, NoteType},
+    note::{NoteAssets, NoteAttachments, NoteExecutionHint, NoteScriptRoot, NoteTag, NoteType},
 };
 use miden_protocol::block::BlockNumber;
 use miden_standards::note::{NetworkAccountTarget, StandardNote};
 
 use super::asset::format_asset;
 
-pub(crate) fn well_known_label_from_root(script_root: &Word) -> Option<&'static str> {
-    StandardNote::from_script_root(*script_root).map(|s| s.name())
+pub(crate) fn well_known_label_from_root(script_root: NoteScriptRoot) -> Option<&'static str> {
+    StandardNote::from_script_root(script_root).map(|s| s.name())
 }
 
 pub(crate) fn format_note_tag(tag: NoteTag) -> String {
@@ -31,7 +31,7 @@ pub(crate) fn render_assets(assets: &NoteAssets) {
 }
 
 pub(crate) fn render_well_known_inputs(
-    script_root: &Word,
+    script_root: NoteScriptRoot,
     inputs: &[Felt],
     header_prefix: &str,
     line_prefix: &str,
@@ -50,7 +50,10 @@ pub(crate) fn render_well_known_inputs(
     true
 }
 
-fn well_known_inputs(script_root: &Word, inputs: &[Felt]) -> Option<(&'static str, Vec<String>)> {
+fn well_known_inputs(
+    script_root: NoteScriptRoot,
+    inputs: &[Felt],
+) -> Option<(&'static str, Vec<String>)> {
     let label = well_known_label_from_root(script_root)?;
     let lines = match label {
         "P2ID" => decode_p2id(inputs),
@@ -221,45 +224,34 @@ fn format_asset_from_word(word: Word) -> String {
     format!("asset word ({})", word.to_hex())
 }
 
-/// Render a note attachment, decoding well-known schemes like [`NetworkAccountTarget`].
-pub(crate) fn render_attachment(attachment: &NoteAttachment, prefix: &str) {
-    let kind = attachment.attachment_kind();
-    if kind.is_none() {
+/// Render a note's attachments, decoding well-known schemes like [`NetworkAccountTarget`].
+pub(crate) fn render_attachments(attachments: &NoteAttachments, prefix: &str) {
+    if attachments.is_empty() {
         return;
     }
 
-    match NetworkAccountTarget::try_from(attachment) {
-        Ok(target) => {
-            println!(
-                "{prefix}attachment: NetworkAccountTarget (scheme={})",
-                attachment.attachment_scheme().as_u32()
-            );
-            println!("{prefix}  target account: {}", target.target_id());
-            println!(
-                "{prefix}  target storage mode: {}",
-                target.target_id().storage_mode()
-            );
-            println!("{prefix}  execution hint: {:?}", target.execution_hint());
-        }
-        Err(_) => {
-            let scheme = attachment.attachment_scheme();
-            println!(
-                "{prefix}attachment: scheme={}, kind={:?}",
-                scheme.as_u32(),
-                kind,
-            );
-            match attachment.content() {
-                miden_protocol::note::NoteAttachmentContent::Word(word) => {
-                    println!("{prefix}  content: {}", word.to_hex());
-                }
-                miden_protocol::note::NoteAttachmentContent::Array(array) => {
-                    println!(
-                        "{prefix}  content: array (commitment: {})",
-                        array.commitment().to_hex()
-                    );
-                }
-                miden_protocol::note::NoteAttachmentContent::None => {}
-            }
+    // A note's attachments may collectively decode into a well-known target.
+    if let Ok(target) = NetworkAccountTarget::try_from(attachments) {
+        println!("{prefix}attachment: NetworkAccountTarget");
+        println!("{prefix}  target account: {}", target.target_id());
+        println!(
+            "{prefix}  target is public: {}",
+            target.target_id().is_public()
+        );
+        println!("{prefix}  execution hint: {:?}", target.execution_hint());
+        return;
+    }
+
+    println!("{prefix}attachments: {}", attachments.num_attachments());
+    for (idx, attachment) in attachments.iter().enumerate() {
+        let content = attachment.content();
+        println!(
+            "{prefix}  [{idx}] scheme={}, words={}",
+            attachment.attachment_scheme().as_u16(),
+            content.num_words(),
+        );
+        for word in content.as_words() {
+            println!("{prefix}      {}", word.to_hex());
         }
     }
 }

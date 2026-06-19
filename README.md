@@ -323,5 +323,5 @@ For contributing, see the [miden-client contributing guide](https://github.com/0
 
 ## Notes
 
-- Built against `miden-client` `0.14`.
+- Built against `miden-client` `0.15`.
 - Licensed under MIT (see `LICENSE`).

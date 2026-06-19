@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use miden_client::{
-    rpc::NodeRpcClient,
+    rpc::{NodeRpcClient, domain::account::GetAccountRequest},
     store::{AccountStorageFilter, PartialBlockchainFilter, Store},
 };
 use miden_protocol::{
@@ -20,7 +20,7 @@ use miden_protocol::{
         MerklePath,
         mmr::{InOrderIndex, PartialMmr},
     },
-    note::NoteScript,
+    note::{NoteScript, NoteScriptRoot},
     transaction::{AccountInputs, PartialBlockchain},
     vm::FutureMaybeSend,
 };
@@ -112,12 +112,10 @@ impl DataStore for NtxDataStore {
     async fn get_foreign_account_inputs(
         &self,
         foreign_account_id: AccountId,
-        ref_block: BlockNumber,
+        _ref_block: BlockNumber,
     ) -> Result<AccountInputs, DataStoreError> {
-        use miden_client::rpc::AccountStateAt;
-
-        // Fetch the full account via get_account_details.
-        let fetched = self
+        // 0.15: `get_account_details` returns `Some(Account)` only for accounts with public state.
+        let account = match self
             .rpc
             .get_account_details(foreign_account_id)
             .await
@@ -125,13 +123,11 @@ impl DataStore for NtxDataStore {
                 DataStoreError::other(format!(
                     "RPC error fetching foreign account {foreign_account_id}: {e}"
                 ))
-            })?;
-
-        let account = match fetched {
-            miden_client::rpc::domain::account::FetchedAccount::Public(account, _) => account,
-            miden_client::rpc::domain::account::FetchedAccount::Private(_, _) => {
+            })? {
+            Some(account) => account,
+            None => {
                 return Err(DataStoreError::other(format!(
-                    "foreign account {foreign_account_id} is private"
+                    "foreign account {foreign_account_id} has no public state"
                 )));
             }
         };
@@ -139,32 +135,22 @@ impl DataStore for NtxDataStore {
         self.mast_store.load_account_code(account.code());
 
         // Build AccountInputs from the full account.
-        // NOTE: get_account() has the same is_public() bug for Network-mode accounts (won't
-        // request details), so we build from the full account instead. Fixed in v0.14.0-beta.
-        let partial = PartialAccount::from(account.as_ref());
+        let partial = PartialAccount::from(&account);
 
-        // Fetch the proof separately. If it fails, fall back to an empty witness — the
+        // Fetch the witness separately. If it fails, fall back to an empty witness — the
         // consumption checker doesn't validate proofs.
-        let witness = {
-            match self
-                .rpc
-                .get_account_proof(
-                    foreign_account_id,
-                    Default::default(),
-                    AccountStateAt::Block(ref_block),
-                    None,
-                    None,
-                )
-                .await
-            {
-                Ok((_, proof)) => proof.into_parts().0,
-                Err(_) => miden_protocol::block::account_tree::AccountWitness::new(
-                    foreign_account_id,
-                    account.to_commitment(),
-                    Default::default(),
-                )
-                .map_err(|e| DataStoreError::other(format!("{e}")))?,
-            }
+        let witness = match self
+            .rpc
+            .get_account(foreign_account_id, GetAccountRequest::new())
+            .await
+        {
+            Ok((_, proof)) => proof.into_parts().0,
+            Err(_) => miden_protocol::block::account_tree::AccountWitness::new(
+                foreign_account_id,
+                account.to_commitment(),
+                Default::default(),
+            )
+            .map_err(|e| DataStoreError::other(format!("{e}")))?,
         };
 
         Ok(AccountInputs::new(partial, witness))
@@ -222,11 +208,11 @@ impl DataStore for NtxDataStore {
 
     fn get_note_script(
         &self,
-        script_root: Word,
+        script_root: NoteScriptRoot,
     ) -> impl FutureMaybeSend<Result<Option<NoteScript>, DataStoreError>> {
         let store = self.store.clone();
         async move {
-            match store.get_note_script(script_root).await {
+            match store.get_note_script(script_root.into()).await {
                 Ok(script) => Ok(Some(script)),
                 Err(_) => Err(DataStoreError::other(format!(
                     "note script with root {script_root} not found"
@@ -244,9 +230,9 @@ async fn build_partial_mmr(
     forest: u32,
     authenticated_blocks: &[BlockHeader],
 ) -> Result<PartialMmr, DataStoreError> {
-    let peaks = store
-        .get_partial_blockchain_peaks_by_block_num(BlockNumber::from(forest))
-        .await?;
+    // 0.15 dropped block-specific peak lookups; use the current peaks.
+    let _ = forest;
+    let peaks = store.get_current_blockchain_peaks().await?;
     let mut partial_mmr = PartialMmr::from_peaks(peaks);
 
     let block_nums: Vec<BlockNumber> = authenticated_blocks

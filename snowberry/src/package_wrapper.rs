@@ -102,8 +102,11 @@ impl PackageWrapper {
         use miden_core_v13::utils::{Deserializable, SliceReader};
 
         let mut reader = SliceReader::new(&self.data);
-        let package = miden_mast_package_v13::Package::read_from(&mut reader)
-            .map_err(|e| SnowberryError::DeserializationFailed { reason: e.to_string() })?;
+        let package = miden_mast_package_v13::Package::read_from(&mut reader).map_err(|e| {
+            SnowberryError::DeserializationFailed {
+                reason: e.to_string(),
+            }
+        })?;
 
         let name = ("name".into(), package.name.clone());
         let digest = ("digest".into(), format!("{:?}", package.digest()));
@@ -120,8 +123,11 @@ impl PackageWrapper {
         use miden_core_v17::utils::{Deserializable, SliceReader};
 
         let mut reader = SliceReader::new(&self.data);
-        let package = miden_mast_package_v17::Package::read_from(&mut reader)
-            .map_err(|e| SnowberryError::DeserializationFailed { reason: e.to_string() })?;
+        let package = miden_mast_package_v17::Package::read_from(&mut reader).map_err(|e| {
+            SnowberryError::DeserializationFailed {
+                reason: e.to_string(),
+            }
+        })?;
 
         let name = ("name".into(), package.name.clone());
         let digest = ("digest".into(), format!("{:x?}", package.digest()));
@@ -138,8 +144,11 @@ impl PackageWrapper {
         use miden_core_v18::utils::{Deserializable, SliceReader};
 
         let mut reader = SliceReader::new(&self.data);
-        let package = miden_mast_package_v18::Package::read_from(&mut reader)
-            .map_err(|e| SnowberryError::DeserializationFailed { reason: e.to_string() })?;
+        let package = miden_mast_package_v18::Package::read_from(&mut reader).map_err(|e| {
+            SnowberryError::DeserializationFailed {
+                reason: e.to_string(),
+            }
+        })?;
 
         let name = ("name".into(), package.name.clone());
         let version = (
@@ -184,8 +193,11 @@ impl PackageWrapper {
         use miden_core_v20::utils::{Deserializable, SliceReader};
 
         let mut reader = SliceReader::new(&self.data);
-        let package = miden_mast_package_v20::Package::read_from(&mut reader)
-            .map_err(|e| SnowberryError::DeserializationFailed { reason: e.to_string() })?;
+        let package = miden_mast_package_v20::Package::read_from(&mut reader).map_err(|e| {
+            SnowberryError::DeserializationFailed {
+                reason: e.to_string(),
+            }
+        })?;
 
         let name = ("name".into(), package.name.clone());
         let version = (
@@ -232,8 +244,11 @@ impl PackageWrapper {
         use miden_core_v22::serde::{Deserializable, SliceReader};
 
         let mut reader = SliceReader::new(&self.data);
-        let package = miden_mast_package_v22::Package::read_from(&mut reader)
-            .map_err(|e| SnowberryError::DeserializationFailed { reason: e.to_string() })?;
+        let package = miden_mast_package_v22::Package::read_from(&mut reader).map_err(|e| {
+            SnowberryError::DeserializationFailed {
+                reason: e.to_string(),
+            }
+        })?;
 
         let name = ("name".into(), package.name.to_string());
         let version = ("version".into(), package.version.to_string());
