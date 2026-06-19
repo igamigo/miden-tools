@@ -1,6 +1,6 @@
 # Snowberry
 
-CLI tool for inspecting [MASP](https://github.com/0xPolygonMiden/miden-base) package files across multiple `miden-mast-package` versions (0.13–0.22).
+CLI tool for inspecting [MASP](https://github.com/0xPolygonMiden/miden-base) package files across multiple `miden-mast-package` versions (0.13–0.23).
 
 ## Usage
 
@@ -17,7 +17,7 @@ snowberry <file.masp> --verbose
 | `[1, 0, 0]`    | 0.17                 |
 | `[2, 0, 0]`    | 0.18                 |
 | `[3, 0, 0]`    | 0.20                 |
-| `[4, 0, 0]`    | 0.22                 |
+| `[4, 0, 0]`    | 0.22 – 0.23          |
 
 ## Output:
 ```shell

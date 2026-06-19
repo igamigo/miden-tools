@@ -7,7 +7,7 @@ A collection of command-line utilities for working with the [Miden](https://gith
 | Tool | Description |
 |------|-------------|
 | [**teasel**](teasel/README.md) | Lightweight CLI utilities for inspecting Miden files, local `miden-client` stores, and RPC endpoints. |
-| [**snowberry**](snowberry/README.md) | CLI tool for inspecting Miden MASP package files across multiple `miden-mast-package` versions (0.13–0.22). |
+| [**snowberry**](snowberry/README.md) | CLI tool for inspecting Miden MASP package files across multiple `miden-mast-package` versions (0.13–0.23). |
 
 See each tool's README for detailed usage.
 

@@ -93,7 +93,7 @@ impl PackageWrapper {
             (1, 0, 0) => self.info_v17(),
             (2, 0, 0) => self.info_v18(),
             (3, 0, 0) => self.info_v20(),
-            (4, 0, 0) => self.info_v22(),
+            (4, 0, 0) => self.info_v23(),
             _ => unreachable!(),
         }
     }
@@ -240,11 +240,11 @@ impl PackageWrapper {
         ])
     }
 
-    fn info_v22(&self) -> Result<Vec<(FieldName, FieldValue)>, SnowberryError> {
-        use miden_core_v22::serde::{Deserializable, SliceReader};
+    fn info_v23(&self) -> Result<Vec<(FieldName, FieldValue)>, SnowberryError> {
+        use miden_core_v23::serde::{Deserializable, SliceReader};
 
         let mut reader = SliceReader::new(&self.data);
-        let package = miden_mast_package_v22::Package::read_from(&mut reader).map_err(|e| {
+        let package = miden_mast_package_v23::Package::read_from(&mut reader).map_err(|e| {
             SnowberryError::DeserializationFailed {
                 reason: e.to_string(),
             }
