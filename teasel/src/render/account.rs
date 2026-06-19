@@ -1,12 +1,12 @@
 use miden_client::account::{Account, AccountHeader};
-use miden_protocol::account::{AccountType, StorageSlotContent};
-use miden_standards::account::faucets::TokenMetadata;
+use miden_protocol::account::StorageSlotContent;
+use miden_standards::account::faucets::FungibleFaucet;
 
 use super::asset::format_asset;
 
 pub(crate) fn render_account(account: &Account, include_vault: bool) {
     let header = AccountHeader::from(account);
-    println!("- account type: {:?}", account.account_type());
+    println!("- account type: {:?}", account.id().account_type());
     println!("- nonce: {}", header.nonce());
     println!("- vault commitment: {}", header.vault_root());
     println!("- storage commitment: {}", header.storage_commitment());
@@ -21,20 +21,14 @@ pub(crate) fn render_account(account: &Account, include_vault: bool) {
 }
 
 fn render_faucet_metadata(account: &Account) {
-    if account.account_type() != AccountType::FungibleFaucet {
-        return;
-    }
-    match TokenMetadata::try_from(account.storage()) {
-        Ok(metadata) => {
-            println!("- faucet metadata:");
-            println!("    symbol: {}", metadata.symbol());
-            println!("    decimals: {}", metadata.decimals());
-            println!("    issuance (token supply): {}", metadata.token_supply());
-            println!("    max supply: {}", metadata.max_supply());
-        },
-        Err(err) => {
-            println!("- faucet metadata: <unable to decode: {err}>");
-        },
+    // 0.15 collapsed `AccountType` to public/private, so faucets are no longer flagged on the id.
+    // Attempt to decode the account as a fungible faucet; non-faucets simply won't decode.
+    if let Ok(faucet) = FungibleFaucet::try_from(account) {
+        println!("- faucet metadata:");
+        println!("    symbol: {}", faucet.symbol());
+        println!("    decimals: {}", faucet.decimals());
+        println!("    issuance (token supply): {}", faucet.token_supply());
+        println!("    max supply: {}", faucet.max_supply());
     }
 }
 
@@ -50,7 +44,7 @@ fn render_storage(account: &Account) {
         match slot.content() {
             StorageSlotContent::Value(word) => {
                 println!("  [{idx}] {} (value): {word}", slot.name());
-            },
+            }
             StorageSlotContent::Map(map) => {
                 println!(
                     "  [{idx}] {} (map, root={}, entries={}):",
@@ -61,7 +55,7 @@ fn render_storage(account: &Account) {
                 for (key, value) in map.entries() {
                     println!("    {key} -> {value}");
                 }
-            },
+            }
         }
     }
 }

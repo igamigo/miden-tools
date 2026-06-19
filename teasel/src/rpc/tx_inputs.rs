@@ -156,10 +156,9 @@ fn render_account_stats(tx_inputs: &TransactionInputs, account_size: usize) {
     println!("- serialized size: {}", bytes_with_unit(account_size));
     println!("- id: {}", account.id());
     println!("- account type: {:?}", account.id().account_type());
-    println!("- storage mode: {}", account.id().storage_mode());
     println!("- nonce: {}", account.nonce());
     println!("- is new: {}", yes_no(account.is_new()));
-    println!("- has public state: {}", yes_no(account.has_public_state()));
+    println!("- has public state: {}", yes_no(account.id().is_public()));
     println!("- account commitment: {}", account.to_commitment());
     println!("- initial commitment: {}", account.initial_commitment());
     println!("- code commitment: {}", account.code().commitment());
@@ -221,7 +220,7 @@ fn render_blockchain_stats(
     println!("- tx kernel commitment: {}", block.tx_kernel_commitment());
     println!(
         "- fee native asset id: {}",
-        block.fee_parameters().native_asset_id()
+        block.fee_parameters().fee_faucet_id()
     );
     println!(
         "- verification base fee: {}",

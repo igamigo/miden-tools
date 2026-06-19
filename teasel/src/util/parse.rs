@@ -65,7 +65,15 @@ fn word_from_felts(values: &[String]) -> Result<Word> {
         .try_into()
         .expect("length enforced above");
 
-    Ok(parsed.map(Felt::new).into())
+    // 0.15: `Felt::new` rejects values outside the field.
+    let felts: [Felt; 4] = parsed
+        .iter()
+        .map(|&v| Felt::new(v).map_err(|_| anyhow!("{v} is not a valid field element")))
+        .collect::<Result<Vec<_>>>()?
+        .try_into()
+        .expect("length enforced above");
+
+    Ok(felts.into())
 }
 
 /// Parse a CLI endpoint string into an RPC `Endpoint`.

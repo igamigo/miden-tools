@@ -47,8 +47,8 @@ pub(crate) fn debug_ntx(
                     notes.push(note.clone());
                     note_files.push(NoteFile::NoteWithProof(note.clone(), proof.clone()));
                 }
-                miden_client::rpc::domain::note::FetchedNote::Private(header, _) => {
-                    println!("  note {} is private, skipping", header.id());
+                miden_client::rpc::domain::note::FetchedNote::Private(note_id, ..) => {
+                    println!("  note {note_id} is private, skipping");
                 }
             }
         }
@@ -61,15 +61,12 @@ pub(crate) fn debug_ntx(
 
         println!("Fetched {} public note(s)", notes.len());
 
-        // Warn if the account is not a network account
-        if !account_id.is_network() {
+        // 0.15 removed the network/storage-mode distinction from account IDs; network execution
+        // still requires public accounts, so warn only on private ones.
+        if !account_id.is_public() {
+            println!("  warning: account {account_id} is private");
             println!(
-                "  warning: account {} has storage mode '{}', not 'network'",
-                account_id,
-                account_id.storage_mode(),
-            );
-            println!(
-                "    the network transaction builder only executes transactions for network accounts"
+                "    the network transaction builder only executes transactions for public network accounts"
             );
         }
 
@@ -102,8 +99,8 @@ pub(crate) fn debug_ntx(
         // attachment whose target account ID matches. Notes without this attachment or with a
         // mismatched target will not be executed by the network.
         for note in &notes {
-            let attachment = note.metadata().attachment();
-            match miden_standards::note::NetworkAccountTarget::try_from(attachment) {
+            let attachments = note.attachments();
+            match miden_standards::note::NetworkAccountTarget::try_from(attachments) {
                 Ok(target) => {
                     let target_id = target.target_id();
                     if target_id == account_id {
@@ -128,18 +125,16 @@ pub(crate) fn debug_ntx(
                     }
                 }
                 Err(_) => {
-                    let kind = attachment.attachment_kind();
-                    if kind.is_none() {
+                    if attachments.is_empty() {
                         println!(
                             "  note {} has no NetworkAccountTarget attachment",
                             note.id(),
                         );
                     } else {
                         println!(
-                            "  note {} has non-standard attachment (scheme={}, kind={:?})",
+                            "  note {} has non-standard attachments ({} present)",
                             note.id(),
-                            attachment.attachment_scheme().as_u32(),
-                            kind,
+                            attachments.num_attachments(),
                         );
                     }
                     println!(
@@ -240,12 +235,12 @@ pub(crate) fn debug_ntx(
 
         match result {
             Ok(info) => {
-                for note in &info.successful {
-                    println!("  note {}: consumable", note.id());
+                for note in info.successful() {
+                    println!("  note {}: consumable", note.note().id());
                 }
-                for failed in &info.failed {
-                    println!("  note {}: FAILED", failed.note.id());
-                    println!("    {}", failed.error);
+                for failed in info.failed() {
+                    println!("  note {}: FAILED", failed.note().id());
+                    println!("    {}", failed.error());
                 }
             }
             Err(err) => {

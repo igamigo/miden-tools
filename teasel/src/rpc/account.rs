@@ -37,20 +37,20 @@ pub(crate) fn inspect_account(
                         println!("- address network: {address_network}");
                     }
                 }
-                println!("- commitment: {}", fetched.commitment());
 
+                // 0.15: `get_account_details` returns `Some(Account)` only for accounts with public
+                // state; private accounts (or those without on-chain state) return `None`.
                 match fetched {
-                    miden_client::rpc::domain::account::FetchedAccount::Private(_, summary) => {
-                        println!("- latest block: {}", summary.last_block_num);
+                    Some(account) => {
+                        println!("- commitment: {}", account.to_commitment());
+                        render_account(&account, verbose);
+                    },
+                    None => {
                         if verbose {
                             println!("- type: private (state not available)");
                         } else {
                             println!("- header unavailable (private account)");
                         }
-                    },
-                    miden_client::rpc::domain::account::FetchedAccount::Public(account, summary) => {
-                        println!("- latest block: {}", summary.last_block_num);
-                        render_account(account.as_ref(), verbose);
                     },
                 }
             },

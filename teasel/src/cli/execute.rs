@@ -200,14 +200,9 @@ fn execute_parse(command: ParseCommand) -> Result<()> {
             println!("Account ID: {}", account_id);
             println!("- account id (hex): {}", account_id.to_hex());
             println!("- account type: {:?}", account_id.account_type());
-            println!("- storage mode: {}", account_id.storage_mode());
             println!(
                 "- public state: {}",
-                if account_id.has_public_state() {
-                    "yes"
-                } else {
-                    "no"
-                }
+                if account_id.is_public() { "yes" } else { "no" }
             );
             println!("- account ID version: {:?}", account_id.version());
 
@@ -283,7 +278,10 @@ fn execute_parse(command: ParseCommand) -> Result<()> {
                 println!("- network: {}", network_id);
                 println!("- account id: {}", account_id);
                 println!("- account type: {:?}", account_id.account_type());
-                println!("- storage mode: {}", account_id.storage_mode());
+                println!(
+                    "- public state: {}",
+                    if account_id.is_public() { "yes" } else { "no" }
+                );
                 println!("- note tag length: {}", decoded_address.note_tag_len());
                 println!(
                     "- note tag: {}",
@@ -318,7 +316,10 @@ fn execute_parse(command: ParseCommand) -> Result<()> {
                 }
                 println!("- account id: {}", account_id);
                 println!("- account type: {:?}", account_id.account_type());
-                println!("- storage mode: {}", account_id.storage_mode());
+                println!(
+                    "- public state: {}",
+                    if account_id.is_public() { "yes" } else { "no" }
+                );
                 println!("- note tag length: {}", addr.note_tag_len());
                 println!(
                     "- note tag: {}",

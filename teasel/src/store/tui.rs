@@ -15,7 +15,6 @@ use miden_client::{
     Word,
     block::BlockHeader,
     crypto::{InOrderIndex, MmrPeaks},
-    note::NoteHeader,
     store::{NoteFilter, PartialBlockchainFilter, Store, TransactionFilter},
 };
 use miden_client_sqlite_store::SqliteStore;
@@ -201,14 +200,11 @@ impl StoreTui {
             self.store
                 .get_partial_blockchain_nodes(PartialBlockchainFilter::All),
         )?;
-        self.mmr_peaks = self.block_headers.last().and_then(|header| {
-            self.handle
-                .block_on(
-                    self.store
-                        .get_partial_blockchain_peaks_by_block_num(header.block_num()),
-                )
-                .ok()
-        });
+        // 0.15 dropped block-specific peak lookups; use the current peaks.
+        self.mmr_peaks = self
+            .handle
+            .block_on(self.store.get_current_blockchain_peaks())
+            .ok();
 
         self.input_notes_per_block = count_notes_per_block(&self.input_notes);
         self.output_notes_per_block.clear();
@@ -306,10 +302,8 @@ impl StoreTui {
             KeyCode::Backspace => {
                 self.filter_input.pop();
             }
-            KeyCode::Char(ch) => {
-                if !ch.is_control() {
-                    self.filter_input.push(ch);
-                }
+            KeyCode::Char(ch) if !ch.is_control() => {
+                self.filter_input.push(ch);
             }
             _ => {}
         }
@@ -377,7 +371,7 @@ impl StoreTui {
                 // Find input note with this nullifier
                 let target_nullifier = miden_client::note::Nullifier::from_raw(*nullifier_word);
                 for (i, note) in self.input_notes.iter().enumerate() {
-                    if note.nullifier() == target_nullifier {
+                    if note.nullifier() == Some(target_nullifier) {
                         self.jump_to_input_note(i);
                         return;
                     }
@@ -603,7 +597,7 @@ impl StoreTui {
                 .input_notes
                 .iter()
                 .enumerate()
-                .filter(|(_, note)| matches(&note.id().to_string()))
+                .filter(|(_, note)| matches(&input_note_id_label(note)))
                 .map(|(idx, _)| idx)
                 .collect(),
             Tab::OutputNotes => self
@@ -739,7 +733,7 @@ impl StoreTui {
                 .map(|idx| {
                     let note = &self.input_notes[idx];
                     let state_char = input_note_state_char(note);
-                    ListItem::new(format!("[{}] {}", state_char, note.id()))
+                    ListItem::new(format!("[{}] {}", state_char, input_note_id_label(note)))
                 })
                 .collect(),
             Tab::OutputNotes => {
@@ -840,10 +834,10 @@ impl StoreTui {
         let note = &self.input_notes[idx];
         let details = note.details();
         let script_root = details.script().root();
-        let script_label = well_known_label_from_root(&script_root);
+        let script_label = well_known_label_from_root(script_root);
 
         let mut lines = vec![];
-        lines.extend(hash_lines("id", &note.id().to_string()));
+        lines.extend(hash_lines("id", &input_note_id_label(note)));
         lines.push(label_line("state", &format_input_note_state(note)));
 
         if let Some(metadata) = note.metadata() {
@@ -918,12 +912,13 @@ impl StoreTui {
             &note.assets().num_assets().to_string(),
         ));
 
-        let commitment = NoteHeader::new(note.id(), note.metadata().clone()).to_commitment();
+        // 0.15: the block note tree commits to `note_id.as_word()`.
+        let commitment = note.id().as_word();
         lines.extend(hash_lines("commitment", &commitment.to_string()));
 
         if let Some(recipient) = note.recipient() {
             let script_root = recipient.script().root();
-            let script_label = well_known_label_from_root(&script_root);
+            let script_label = well_known_label_from_root(script_root);
             lines.push(Line::from(""));
             if let Some(label) = script_label {
                 lines.push(label_line(
@@ -1136,6 +1131,15 @@ fn hash_lines(label: &str, hash: &str) -> Vec<Line<'static>> {
         ),
         Span::raw(hash.to_string()),
     ])]
+}
+
+/// A bare input-note record may lack the metadata required to derive a `NoteId` (0.15), so fall
+/// back to the stable details commitment when the id isn't available.
+fn input_note_id_label(note: &miden_client::store::InputNoteRecord) -> String {
+    match note.id() {
+        Some(id) => id.to_string(),
+        None => note.details_commitment().as_word().to_hex(),
+    }
 }
 
 fn input_note_state_char(note: &miden_client::store::InputNoteRecord) -> char {

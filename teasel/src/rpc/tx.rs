@@ -121,13 +121,13 @@ fn render_transaction(tx: &TransactionRecord, verbose: bool, notes: Option<&Tran
                 println!("  [{idx}] {} ({kind})", note.id());
                 if let Some(recipient) = note.recipient() {
                     let script_root = recipient.script().root();
-                    let script_label = match well_known_label_from_root(&script_root) {
+                    let script_label = match well_known_label_from_root(script_root) {
                         Some(label) => format!("{script_root} ({label})"),
                         None => script_root.to_string(),
                     };
                     println!("    script root: {script_label}");
                     render_well_known_inputs(
-                        &script_root,
+                        script_root,
                         recipient.storage().items(),
                         "    ",
                         "      ",
@@ -165,7 +165,10 @@ async fn load_transaction_notes(
 
     let mut input_by_nullifier: HashMap<Nullifier, InputNoteRecord> = HashMap::new();
     for note in input_notes {
-        input_by_nullifier.insert(note.nullifier(), note);
+        // 0.15: an input note record only exposes a nullifier once it carries metadata.
+        if let Some(nullifier) = note.nullifier() {
+            input_by_nullifier.insert(nullifier, note);
+        }
     }
 
     let input_notes = input_nullifiers

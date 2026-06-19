@@ -58,12 +58,12 @@ pub(crate) fn inspect_store_note(
 pub(crate) fn render_input_note(note: &miden_client::store::InputNoteRecord) {
     let details = note.details();
     let script_root = details.script().root();
-    let script_label = match well_known_label_from_root(&script_root) {
+    let script_label = match well_known_label_from_root(script_root) {
         Some(label) => format!("{script_root} ({label})"),
         None => script_root.to_string(),
     };
 
-    println!("Input note {}:", note.id());
+    println!("Input note {}:", input_note_id_label(note));
     println!("- state: {:?}", note.state());
     if let Some(metadata) = note.metadata() {
         println!("- sender: {}", metadata.sender());
@@ -77,7 +77,7 @@ pub(crate) fn render_input_note(note: &miden_client::store::InputNoteRecord) {
     }
     render_assets(details.assets());
     println!("- script root: {script_label}");
-    render_well_known_inputs(&script_root, details.storage().items(), "- ", "  ");
+    render_well_known_inputs(script_root, details.storage().items(), "- ", "  ");
     if let Some(created_at) = note.created_at() {
         println!("- created at: {created_at}");
     }
@@ -112,14 +112,23 @@ pub(crate) fn render_output_note(note: &miden_client::store::OutputNoteRecord) {
 
     if let Some(recipient) = note.recipient() {
         let script_root = recipient.script().root();
-        let script_label = match well_known_label_from_root(&script_root) {
+        let script_label = match well_known_label_from_root(script_root) {
             Some(label) => format!("{script_root} ({label})"),
             None => script_root.to_string(),
         };
         println!("- script root: {script_label}");
-        render_well_known_inputs(&script_root, recipient.storage().items(), "- ", "  ");
+        render_well_known_inputs(script_root, recipient.storage().items(), "- ", "  ");
     } else {
         println!("- recipient: n/a");
+    }
+}
+
+/// A bare input-note record may lack the metadata required to derive a `NoteId` (0.15), so fall
+/// back to the stable details commitment when the id isn't available.
+fn input_note_id_label(note: &InputNoteRecord) -> String {
+    match note.id() {
+        Some(id) => id.to_string(),
+        None => note.details_commitment().as_word().to_hex(),
     }
 }
 
@@ -259,7 +268,7 @@ fn format_input_note_line(note: &InputNoteRecord) -> String {
 
     format!(
         "- input {} state={} type={} tag={} sender={}",
-        note.id(),
+        input_note_id_label(note),
         state_label,
         note_type,
         tag,

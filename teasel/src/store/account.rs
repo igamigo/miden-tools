@@ -76,11 +76,10 @@ pub(crate) fn list_store_accounts(store_path: PathBuf) -> Result<()> {
         for (header, status) in accounts {
             let account_id = header.id();
             println!(
-                "- {} nonce={} status={} mode={} type={:?}",
+                "- {} nonce={} status={} type={:?}",
                 account_id,
                 header.nonce().as_canonical_u64(),
                 status,
-                account_id.storage_mode(),
                 account_id.account_type()
             );
         }

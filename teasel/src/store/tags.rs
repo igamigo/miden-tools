@@ -26,7 +26,12 @@ pub(crate) fn list_store_tags(store_path: PathBuf) -> Result<()> {
                 miden_client::sync::NoteTagSource::Account(account_id) => {
                     format!("account {}", account_id)
                 }
-                miden_client::sync::NoteTagSource::Note(note_id) => format!("note {}", note_id),
+                miden_client::sync::NoteTagSource::Note(details_commitment) => {
+                    format!("note {}", details_commitment.as_word())
+                }
+                miden_client::sync::NoteTagSource::Subscription(key) => {
+                    format!("subscription {}", key.to_hex())
+                }
                 miden_client::sync::NoteTagSource::User => "user".to_string(),
             };
             println!("- {} source={}", format_note_tag(record.tag), source);
