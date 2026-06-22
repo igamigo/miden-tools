@@ -1,6 +1,6 @@
 [package]
 name = "snowberry"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 authors = ["lima-limon-inc"]
 description = "CLI tool for inspecting Miden MASP package files across multiple miden-mast-package versions"
